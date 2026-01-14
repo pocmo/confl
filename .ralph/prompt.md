@@ -22,9 +22,9 @@
    - Run confl commands to verify, e.g.:
      `uv run confl --help`
 8. If tests pass and verification works:
-   - Commit your changes with a descriptive message referencing the ticket
    - Run `tk close <id>` to close the ticket
-   - Run `tk add-note <id> "Completed in commit <sha>"`
+   - Run `tk add-note <id> "Completed: [brief summary]"`
+   - **Commit code changes AND ticket updates together** (see "Commit Messages" section below)
 9. **APPEND a brief note to the handoff log** (`.ralph/handoff.log`):
    - What ticket you worked on
    - What you did
@@ -76,7 +76,13 @@ Examples:
 - `fix(parser): handle empty metadata.name [t-0ac2]`
 - `docs(cli): document shell quoting for $ in IDs [t-2918]`
 
-**Include ticket changes**: Always stage and commit any changes to `.tickets/` (ticket status, notes) along with your code changes.
+**IMPORTANT**: After closing a ticket and adding notes, stage ALL changes together in ONE commit:
+- Your code changes
+- Test changes
+- Documentation updates (if any)
+- Ticket updates in `.tickets/` (status files, notes)
+
+Do NOT create a separate "chore" commit just for ticket changes. Everything goes in one work commit.
 
 ## Filing Follow-up Tickets
 
