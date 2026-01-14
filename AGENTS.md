@@ -21,8 +21,11 @@ confl/
 
 ## Architecture
 
+- [Design Principles](docs/architecture/design-principles.md) — start here
 - [CLI Design](docs/architecture/cli-design.md)
 - [Configuration](docs/architecture/configuration.md)
+- [Content Formats](docs/architecture/content-formats.md)
+- [Page Commands](docs/architecture/page-commands.md)
 
 ## API Reference
 
