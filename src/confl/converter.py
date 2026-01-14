@@ -347,6 +347,34 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             # Default placeholder
             return "[Child pages]\n\n"
 
+        # Handle attachments macro (lists files on page)
+        if macro_name == "attachments":
+            # Extract parameters to provide context
+            params = {}
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                param_value = param.get_text().strip()
+                if param_name and param_value:
+                    params[param_name] = param_value
+
+            # Build descriptive placeholder based on parameters
+            if params:
+                # Common parameters: old (show old versions), upload (allow upload), etc.
+                param_parts = []
+                if "old" in params and params["old"].lower() == "true":
+                    param_parts.append("include old versions")
+                if "upload" in params and params["upload"].lower() == "true":
+                    param_parts.append("upload enabled")
+                if "patterns" in params:
+                    param_parts.append(f"pattern: {params['patterns']}")
+
+                if param_parts:
+                    param_desc = ", ".join(param_parts)
+                    return f"[Page attachments: {param_desc}]\n\n"
+
+            # Default placeholder
+            return "[Page attachments]\n\n"
+
         # For unknown macros, handle gracefully
         return self._handle_unknown_macro(el, macro_name, text, **options)
 
@@ -578,6 +606,7 @@ def storage_to_markdown(storage: str) -> str:
         - Jira macro → bracketed Jira issue keys or query
         - Excerpt macro → labeled content block
         - Children macro → placeholder with parameters
+        - Attachments macro → placeholder with parameters
         - Page links (ac:link with ri:page) → bracketed text
         - User mentions (ri:user) → @username format
 

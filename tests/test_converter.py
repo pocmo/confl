@@ -999,6 +999,95 @@ class TestChildrenMacro:
         assert "for more information." in result
 
 
+class TestAttachmentsMacro:
+    """Test attachments macro conversion."""
+
+    def test_attachments_macro_default(self) -> None:
+        """Test basic attachments macro with no parameters."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="attachments" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page attachments]" in result
+
+    def test_attachments_macro_with_old_parameter(self) -> None:
+        """Test attachments macro with old=true (include old versions)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="attachments" ac:schema-version="1">
+            <ac:parameter ac:name="old">true</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page attachments:" in result
+        assert "include old versions" in result
+
+    def test_attachments_macro_with_upload_parameter(self) -> None:
+        """Test attachments macro with upload=true (upload enabled)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="attachments" ac:schema-version="1">
+            <ac:parameter ac:name="upload">true</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page attachments:" in result
+        assert "upload enabled" in result
+
+    def test_attachments_macro_with_patterns_parameter(self) -> None:
+        """Test attachments macro with patterns parameter (file filter)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="attachments" ac:schema-version="1">
+            <ac:parameter ac:name="patterns">*.pdf</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page attachments:" in result
+        assert "pattern: *.pdf" in result
+
+    def test_attachments_macro_with_multiple_parameters(self) -> None:
+        """Test attachments macro with multiple parameters."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="attachments" ac:schema-version="1">
+            <ac:parameter ac:name="old">true</ac:parameter>
+            <ac:parameter ac:name="upload">true</ac:parameter>
+            <ac:parameter ac:name="patterns">*.jpg,*.png</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page attachments:" in result
+        # Should contain all three parameter descriptions
+        assert "include old versions" in result
+        assert "upload enabled" in result
+        assert "pattern: *.jpg,*.png" in result
+
+    def test_attachments_macro_in_paragraph(self) -> None:
+        """Test attachments macro embedded in paragraph text."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>The following files are available:
+        <ac:structured-macro ac:name="attachments" ac:schema-version="1">
+            <ac:parameter ac:name="patterns">*.pdf</ac:parameter>
+        </ac:structured-macro>
+        for download.</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "The following files are available:" in result
+        assert "[Page attachments:" in result
+        assert "pattern: *.pdf" in result
+        assert "for download." in result
+
+
 class TestUnknownMacros:
     """Test handling of unknown/unsupported Confluence macros."""
 
