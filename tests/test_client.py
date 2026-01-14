@@ -901,3 +901,249 @@ def test_confluence_client_delete_page_forbidden(httpx_mock: HTTPXMock):
 
     assert exc_info.value.status_code == 403
     assert "Permission denied" in str(exc_info.value)
+
+
+def test_confluence_client_create_page(httpx_mock: HTTPXMock):
+    """Test creating a page successfully."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock successful response
+    created_page_data = {
+        "id": "98765",
+        "status": "current",
+        "title": "New Page",
+        "spaceId": "12345",
+        "body": {
+            "storage": {
+                "value": "<p>New content</p>",
+                "representation": "storage",
+            },
+        },
+        "version": {"number": 1},
+    }
+
+    httpx_mock.add_response(
+        method="POST",
+        url="https://test.atlassian.net/wiki/api/v2/pages",
+        json=created_page_data,
+    )
+
+    result = confluence.create_page(
+        space_id="12345",
+        title="New Page",
+        body="<p>New content</p>",
+    )
+
+    assert result["id"] == "98765"
+    assert result["title"] == "New Page"
+    assert result["spaceId"] == "12345"
+    assert result["body"]["storage"]["value"] == "<p>New content</p>"
+    assert result["version"]["number"] == 1
+
+    # Verify request payload
+    requests = httpx_mock.get_requests()
+    assert len(requests) == 1
+    request = requests[0]
+    payload = request.read().decode()
+    assert '"New Page"' in payload
+    assert '"<p>New content</p>"' in payload
+    assert '"12345"' in payload
+
+
+def test_confluence_client_create_page_with_parent(httpx_mock: HTTPXMock):
+    """Test creating a page with a parent page."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock successful response
+    created_page_data = {
+        "id": "98765",
+        "status": "current",
+        "title": "Child Page",
+        "spaceId": "12345",
+        "parentId": "54321",
+        "body": {
+            "storage": {
+                "value": "<p>Child content</p>",
+                "representation": "storage",
+            },
+        },
+        "version": {"number": 1},
+    }
+
+    httpx_mock.add_response(
+        method="POST",
+        url="https://test.atlassian.net/wiki/api/v2/pages",
+        json=created_page_data,
+    )
+
+    result = confluence.create_page(
+        space_id="12345",
+        title="Child Page",
+        body="<p>Child content</p>",
+        parent_id="54321",
+    )
+
+    assert result["id"] == "98765"
+    assert result["title"] == "Child Page"
+    assert result["parentId"] == "54321"
+
+    # Verify request payload includes parentId
+    requests = httpx_mock.get_requests()
+    assert len(requests) == 1
+    request = requests[0]
+    payload = request.read().decode()
+    assert '"parentId"' in payload or '"parentId"' in payload
+    assert '"54321"' in payload
+
+
+def test_confluence_client_create_page_invalid_space(httpx_mock: HTTPXMock):
+    """Test creating a page with invalid space ID."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="POST",
+        url="https://test.atlassian.net/wiki/api/v2/pages",
+        status_code=400,
+        json={"message": "Invalid space ID"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.create_page(
+            space_id="invalid",
+            title="New Page",
+            body="<p>Content</p>",
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "Client error (400)" in str(exc_info.value)
+
+
+def test_confluence_client_create_page_duplicate_title(httpx_mock: HTTPXMock):
+    """Test creating a page with duplicate title in space."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="POST",
+        url="https://test.atlassian.net/wiki/api/v2/pages",
+        status_code=400,
+        json={"message": "A page with this title already exists in the space"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.create_page(
+            space_id="12345",
+            title="Existing Page",
+            body="<p>Content</p>",
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "already exists" in str(exc_info.value)
+
+
+def test_confluence_client_create_page_unauthorized(httpx_mock: HTTPXMock):
+    """Test creating a page with invalid credentials."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="invalid",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="POST",
+        url="https://test.atlassian.net/wiki/api/v2/pages",
+        status_code=401,
+        json={"message": "Invalid credentials"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.create_page(
+            space_id="12345",
+            title="New Page",
+            body="<p>Content</p>",
+        )
+
+    assert exc_info.value.status_code == 401
+    assert "Authentication failed" in str(exc_info.value)
+
+
+def test_confluence_client_create_page_forbidden(httpx_mock: HTTPXMock):
+    """Test creating a page without proper permissions."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="POST",
+        url="https://test.atlassian.net/wiki/api/v2/pages",
+        status_code=403,
+        json={"message": "Insufficient permissions to create pages in space"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.create_page(
+            space_id="12345",
+            title="New Page",
+            body="<p>Content</p>",
+        )
+
+    assert exc_info.value.status_code == 403
+    assert "Permission denied" in str(exc_info.value)
+
+
+def test_confluence_client_create_page_invalid_parent(httpx_mock: HTTPXMock):
+    """Test creating a page with invalid parent ID."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="POST",
+        url="https://test.atlassian.net/wiki/api/v2/pages",
+        status_code=404,
+        json={"message": "Parent page not found"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.create_page(
+            space_id="12345",
+            title="Child Page",
+            body="<p>Content</p>",
+            parent_id="nonexistent",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert "Not found" in str(exc_info.value)

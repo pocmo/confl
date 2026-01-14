@@ -255,6 +255,47 @@ class ConfluenceClient:
 
         return results[0]
 
+    def create_page(
+        self,
+        space_id: str,
+        title: str,
+        body: str,
+        parent_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a new page in a space.
+
+        Args:
+            space_id: Space ID where page will be created
+            title: Page title
+            body: Page body content in storage format
+            parent_id: Optional parent page ID for hierarchy
+
+        Returns:
+            Created page data including new page ID, title, version, etc.
+
+        Raises:
+            ApiError: If the request fails (e.g., duplicate title, invalid space)
+        """
+        payload: dict[str, Any] = {
+            "spaceId": space_id,
+            "status": "current",
+            "title": title,
+            "body": {
+                "representation": "storage",
+                "value": body,
+            },
+        }
+
+        if parent_id:
+            payload["parentId"] = parent_id
+
+        response = self.client.post("/pages", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
     def delete_page(self, page_id: str) -> None:
         """Delete a page by ID.
 
