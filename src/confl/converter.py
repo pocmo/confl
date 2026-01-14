@@ -442,6 +442,42 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
 
         return ""
 
+    def convert_ri_user(self, el: Tag, text: str, **options: Any) -> str:
+        """Convert Confluence user mention to @username format.
+
+        Handles <ri:user> tags with username or account-id attributes.
+        Prefers ri:username for readability, falls back to ri:userkey or ri:account-id.
+
+        Example Confluence formats:
+            <ri:user ri:username="jsmith" />
+            <ri:user ri:account-id="abc123" ri:userkey="~jsmith" />
+
+        Result: @jsmith or @abc123
+        """
+        # Try to extract username (most readable)
+        username_attr = el.get("ri:username", "")
+        # el.get() can return a list in some edge cases, ensure it's a string
+        username = username_attr if isinstance(username_attr, str) else ""
+        if username:
+            return f"@{username}"
+
+        # Fall back to userkey (often contains username with ~ prefix)
+        userkey_attr = el.get("ri:userkey", "")
+        userkey = userkey_attr if isinstance(userkey_attr, str) else ""
+        if userkey:
+            # Strip ~ prefix if present
+            clean_userkey = userkey.lstrip("~")
+            return f"@{clean_userkey}"
+
+        # Last resort: use account-id
+        account_id_attr = el.get("ri:account-id", "")
+        account_id = account_id_attr if isinstance(account_id_attr, str) else ""
+        if account_id:
+            return f"@{account_id}"
+
+        # If no identifier found, return placeholder
+        return "@user"
+
 
 def storage_to_markdown(storage: str) -> str:
     """
@@ -474,6 +510,7 @@ def storage_to_markdown(storage: str) -> str:
         - Expand macros → HTML details/summary
         - TOC macro → italic text placeholder
         - Page links (ac:link with ri:page) → bracketed text
+        - User mentions (ri:user) → @username format
 
     Partial support:
         - Unknown macros → text content or omitted

@@ -1160,3 +1160,122 @@ class TestTaskLists:
         result = storage_to_markdown(storage)
         assert "- [x] Uppercase status" in result
         assert "- [ ] Mixed case status" in result
+
+
+class TestUserMentions:
+    """Test Confluence user mention conversion."""
+
+    def test_user_mention_with_username(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<p>Hello <ri:user ri:username="jsmith" /></p>'
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+
+    def test_user_mention_with_account_id(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<p>Hello <ri:user ri:account-id="abc123" /></p>'
+        result = storage_to_markdown(storage)
+        assert "@abc123" in result
+
+    def test_user_mention_with_userkey(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<p>Hello <ri:user ri:userkey="~jsmith" /></p>'
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+
+    def test_user_mention_with_userkey_no_tilde(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<p>Hello <ri:user ri:userkey="jsmith" /></p>'
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+
+    def test_user_mention_prefers_username(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # When multiple attributes present, username should be preferred
+        storage = (
+            '<p>Hello <ri:user ri:username="jsmith" '
+            'ri:account-id="abc123" ri:userkey="~jdoe" /></p>'
+        )
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        assert "@abc123" not in result
+        assert "@jdoe" not in result
+
+    def test_user_mention_falls_back_to_userkey(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # When username not present, should use userkey
+        storage = '<p>Hello <ri:user ri:userkey="~jsmith" ri:account-id="abc123" /></p>'
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        assert "@abc123" not in result
+
+    def test_user_mention_falls_back_to_account_id(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # When username and userkey not present, should use account-id
+        storage = '<p>Hello <ri:user ri:account-id="abc123" /></p>'
+        result = storage_to_markdown(storage)
+        assert "@abc123" in result
+
+    def test_user_mention_without_attributes(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: ri:user without any identifier (should use placeholder)
+        storage = "<p>Hello <ri:user /></p>"
+        result = storage_to_markdown(storage)
+        assert "@user" in result
+
+    def test_multiple_user_mentions(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>Meeting with <ri:user ri:username="jsmith" /> and <ri:user ri:username="bjones" /></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        assert "@bjones" in result
+
+    def test_user_mention_in_formatted_text(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>Assigned to <strong><ri:user ri:username="jsmith" /></strong> for review</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        assert "**" in result  # Should preserve bold formatting
+
+    def test_user_mention_in_list(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ul>
+            <li>Contact <ri:user ri:username="jsmith" /></li>
+            <li>Follow up with <ri:user ri:username="bjones" /></li>
+        </ul>
+        """
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        assert "@bjones" in result
+
+    def test_user_mention_with_special_characters(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Test usernames with dots, dashes, underscores
+        storage = """
+        <p>
+            <ri:user ri:username="john.smith" />
+            <ri:user ri:username="jane-doe" />
+            <ri:user ri:username="bob_jones" />
+        </p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@john.smith" in result
+        assert "@jane-doe" in result
+        assert "@bob_jones" in result
