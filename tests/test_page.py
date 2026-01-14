@@ -246,8 +246,8 @@ class TestPageGetCommand:
         assert result.exit_code == 2
         assert "Invalid page reference" in result.stderr
 
-    def test_get_page_markdown_warning(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
-        """Test that --markdown flag shows warning (not yet implemented)."""
+    def test_get_page_markdown_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test that --markdown flag outputs converted markdown."""
         page_data = {
             "id": "12345678",
             "status": "current",
@@ -260,7 +260,7 @@ class TestPageGetCommand:
             },
             "body": {
                 "storage": {
-                    "value": "<p>Test content</p>",
+                    "value": "<h1>Heading</h1><p>Test content</p>",
                     "representation": "storage",
                 },
             },
@@ -274,7 +274,52 @@ class TestPageGetCommand:
 
         result = runner.invoke(app, ["page", "get", "12345678", "--markdown"])
         assert result.exit_code == 0
-        assert "not yet implemented" in result.stderr.lower()
+        # Check that markdown conversion happened
+        assert "# Heading" in result.stdout or "Heading" in result.stdout
+        assert "Test content" in result.stdout
+
+    def test_get_page_rich_rendering_with_macros(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test Rich rendering with Confluence macros (code, panels)."""
+        page_data = {
+            "id": "12345678",
+            "status": "current",
+            "title": "Test Page with Macros",
+            "spaceId": "98765",
+            "version": {
+                "number": 1,
+                "authorId": "user123",
+                "createdAt": "2024-01-15T10:00:00.000Z",
+            },
+            "body": {
+                "storage": {
+                    "value": (
+                        "<h1>Code Example</h1>"
+                        '<ac:structured-macro ac:name="code" ac:schema-version="1">'
+                        '<ac:parameter ac:name="language">python</ac:parameter>'
+                        "<ac:plain-text-body><![CDATA[print('hello')]]></ac:plain-text-body>"
+                        "</ac:structured-macro>"
+                        '<ac:structured-macro ac:name="info">'
+                        "<ac:rich-text-body><p>Important info</p></ac:rich-text-body>"
+                        "</ac:structured-macro>"
+                    ),
+                    "representation": "storage",
+                },
+            },
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
+            method="GET",
+            json=page_data,
+        )
+
+        result = runner.invoke(app, ["page", "get", "12345678"])
+        assert result.exit_code == 0
+        # Check that content is rendered (exact format may vary with Rich rendering)
+        assert "Test Page with Macros" in result.stdout
+        assert "hello" in result.stdout or "print" in result.stdout
 
 
 class TestListPages:

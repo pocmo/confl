@@ -7,10 +7,11 @@ from typing import Any
 
 import typer
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
-from confl.converter import markdown_to_storage
+from confl.converter import markdown_to_storage, storage_to_markdown
 
 app = typer.Typer(help="Manage pages")
 console = Console()
@@ -100,7 +101,7 @@ def get_page(
     json_output: bool = typer.Option(False, "--json", help="Output full API response as JSON"),
     raw: bool = typer.Option(False, "--raw", help="Output Confluence storage format"),
     markdown: bool = typer.Option(
-        False, "--markdown", help="Output raw markdown (when conversion ready)"
+        False, "--markdown", help="Output raw markdown (converted from storage format)"
     ),
 ) -> None:
     """Fetch and display a page.
@@ -136,26 +137,24 @@ def get_page(
             console.print(_format_page_metadata(page))
         print(content)
     elif markdown:
-        # TODO: Implement markdown conversion when ready
-        err_console.print(
-            "[yellow]Warning:[/yellow] Markdown conversion not yet implemented. "
-            "Showing storage format instead."
-        )
+        # Output raw markdown (converted from storage)
         content = _get_page_content(page, "storage")
+        markdown_content = storage_to_markdown(content)
         if not body_only:
             console.print(_format_page_metadata(page))
-        print(content)
+        print(markdown_content)
     else:
-        # Default: Rich terminal output
-        # For now, show storage format as it is
-        # TODO: Convert to markdown first, then render with Rich
+        # Default: Rich terminal output with Markdown rendering
         if not body_only:
             console.print(_format_page_metadata(page))
 
+        # Get storage content and convert to Markdown
         content = _get_page_content(page, "storage")
-        # Try to render as markdown for now (will be improved with proper conversion)
-        # For now just print the content
-        console.print(content)
+        markdown_content = storage_to_markdown(content)
+
+        # Render with Rich's Markdown renderer
+        md = Markdown(markdown_content)
+        console.print(md)
 
 
 @app.command("list")
