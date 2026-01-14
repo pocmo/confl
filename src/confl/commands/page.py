@@ -245,6 +245,100 @@ def delete_page(
         console.print(f"[green]✓[/green] Page {page_id} deleted successfully")
 
 
+@app.command("create")
+def create_page(
+    space: str = typer.Option(..., "--space", help="Space key (e.g., DEV)"),
+    title: str = typer.Option(..., "--title", help="Page title"),
+    body: str = typer.Option(None, "--body", help="Page content (Markdown by default)"),
+    body_file: str = typer.Option(None, "--body-file", help="Read content from file"),
+    parent: str = typer.Option(None, "--parent", help="Parent page ID (optional)"),
+    raw: bool = typer.Option(False, "--raw", help="Provide content in storage format directly"),
+    json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+) -> None:
+    """Create a new page.
+
+    Examples:
+        confl page create --space DEV --title "My Page" --body "# Content"
+        confl page create --space DEV --title "My Page" --body-file content.md
+        cat content.md | confl page create --space DEV --title "My Page"
+        confl page create --space DEV --title "Child" --parent 12345678 --body "Content"
+        confl page create --space DEV --title "Page" --body "<p>HTML</p>" --raw
+    """
+    # Get content from various sources
+    content = None
+    if body:
+        content = body
+    elif body_file:
+        try:
+            with open(body_file, encoding="utf-8") as f:
+                content = f.read()
+        except FileNotFoundError:
+            err_console.print(f"[red]Error:[/red] File not found: {body_file}")
+            sys.exit(2)
+        except Exception as e:
+            err_console.print(f"[red]Error:[/red] Failed to read file: {e}")
+            sys.exit(2)
+    elif not sys.stdin.isatty():
+        # Read from stdin
+        stdin_content = sys.stdin.read()
+        # Only use stdin if it's not empty
+        if stdin_content and stdin_content.strip():
+            content = stdin_content
+
+    # Must provide content
+    if content is None:
+        err_console.print(
+            "[red]Error:[/red] Must provide content via --body, --body-file, or stdin"
+        )
+        sys.exit(2)
+
+    # Convert markdown to storage format unless --raw
+    storage_content = content if raw else markdown_to_storage(content)
+
+    # Get space ID from space key
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+        space_data = confluence.get_space_by_key(space)
+        space_id = space_data.get("id")
+        if not space_id:
+            err_console.print(f"[red]Error:[/red] Could not get space ID for space: {space}")
+            sys.exit(1)
+    except ApiError as e:
+        err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Create the page
+    try:
+        created_page = confluence.create_page(
+            space_id=space_id,
+            title=title,
+            body=storage_content,
+            parent_id=parent,
+        )
+    except ApiError as e:
+        err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Output success
+    if json_output:
+        print(json.dumps(created_page, indent=2))
+    else:
+        page_id = created_page.get("id", "")
+        page_links = created_page.get("_links", {})
+        web_ui = page_links.get("webui", "")
+
+        # Construct full URL if we have the base URL
+        page_url = ""
+        if web_ui and hasattr(client, "base_url"):
+            page_url = f"{client.base_url}{web_ui}"
+
+        console.print("[green]✓[/green] Page created successfully")
+        console.print(f"ID: {page_id}")
+        if page_url:
+            console.print(f"URL: {page_url}")
+
+
 @app.command("update")
 def update_page(
     ref: str = typer.Argument(..., help="Page ID or URL"),

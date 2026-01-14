@@ -936,3 +936,395 @@ class TestPageUpdateCommand:
         )
         assert result.exit_code == 2
         assert "File not found" in result.stderr
+
+
+class TestPageCreateCommand:
+    """Tests for 'confl page create' command."""
+
+    def test_create_page_with_body_flag(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test creating a page with --body flag."""
+        # Mock GET request to fetch space by key
+        space_data = {
+            "id": "98765",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
+        # Mock POST request to create page
+        created_page_data = {
+            "id": "12345678",
+            "status": "current",
+            "title": "New Page",
+            "spaceId": "98765",
+            "version": {"number": 1},
+            "_links": {
+                "webui": "/wiki/spaces/DEV/pages/12345678/New+Page",
+            },
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages",
+            method="POST",
+            json=created_page_data,
+        )
+
+        result = runner.invoke(
+            app, ["page", "create", "--space", "DEV", "--title", "New Page", "--body", "# Content"]
+        )
+        assert result.exit_code == 0
+        assert "Page created successfully" in result.stdout
+        assert "12345678" in result.stdout
+
+    def test_create_page_with_parent(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test creating a page with parent hierarchy."""
+        space_data = {
+            "id": "98765",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
+        created_page_data = {
+            "id": "87654321",
+            "status": "current",
+            "title": "Child Page",
+            "spaceId": "98765",
+            "parentId": "12345678",
+            "version": {"number": 1},
+            "_links": {
+                "webui": "/wiki/spaces/DEV/pages/87654321/Child+Page",
+            },
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages",
+            method="POST",
+            json=created_page_data,
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "DEV",
+                "--title",
+                "Child Page",
+                "--body",
+                "Content",
+                "--parent",
+                "12345678",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Page created successfully" in result.stdout
+        assert "87654321" in result.stdout
+
+    def test_create_page_with_raw_flag(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test creating a page with --raw flag for storage format."""
+        space_data = {
+            "id": "98765",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
+        created_page_data = {
+            "id": "12345678",
+            "status": "current",
+            "title": "Raw Page",
+            "spaceId": "98765",
+            "version": {"number": 1},
+            "_links": {
+                "webui": "/wiki/spaces/DEV/pages/12345678/Raw+Page",
+            },
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages",
+            method="POST",
+            json=created_page_data,
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "DEV",
+                "--title",
+                "Raw Page",
+                "--body",
+                "<p>HTML content</p>",
+                "--raw",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Page created successfully" in result.stdout
+
+    def test_create_page_json_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test creating a page with --json output."""
+        space_data = {
+            "id": "98765",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
+        created_page_data = {
+            "id": "12345678",
+            "status": "current",
+            "title": "JSON Page",
+            "spaceId": "98765",
+            "version": {"number": 1},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages",
+            method="POST",
+            json=created_page_data,
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "DEV",
+                "--title",
+                "JSON Page",
+                "--body",
+                "Content",
+                "--json",
+            ],
+        )
+        assert result.exit_code == 0
+        output = json.loads(result.stdout)
+        assert output["id"] == "12345678"
+        assert output["title"] == "JSON Page"
+
+    def test_create_page_from_stdin(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test creating a page with content from stdin."""
+        space_data = {
+            "id": "98765",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
+        created_page_data = {
+            "id": "12345678",
+            "status": "current",
+            "title": "Stdin Page",
+            "spaceId": "98765",
+            "version": {"number": 1},
+            "_links": {
+                "webui": "/wiki/spaces/DEV/pages/12345678/Stdin+Page",
+            },
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages",
+            method="POST",
+            json=created_page_data,
+        )
+
+        result = runner.invoke(
+            app,
+            ["page", "create", "--space", "DEV", "--title", "Stdin Page"],
+            input="# Content from stdin\n\nParagraph text.",
+        )
+        assert result.exit_code == 0
+        assert "Page created successfully" in result.stdout
+
+    def test_create_page_with_body_file(
+        self, httpx_mock: HTTPXMock, mock_config_env: None, tmp_path
+    ) -> None:
+        """Test creating a page with content from file."""
+        # Create temporary markdown file
+        content_file = tmp_path / "content.md"
+        content_file.write_text("# File content\n\nFrom a file.")
+
+        space_data = {
+            "id": "98765",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
+        created_page_data = {
+            "id": "12345678",
+            "status": "current",
+            "title": "File Page",
+            "spaceId": "98765",
+            "version": {"number": 1},
+            "_links": {
+                "webui": "/wiki/spaces/DEV/pages/12345678/File+Page",
+            },
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages",
+            method="POST",
+            json=created_page_data,
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "DEV",
+                "--title",
+                "File Page",
+                "--body-file",
+                str(content_file),
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Page created successfully" in result.stdout
+
+    def test_create_page_no_content(self, mock_config_env: None) -> None:
+        """Test creating a page without content fails."""
+        result = runner.invoke(app, ["page", "create", "--space", "DEV", "--title", "Empty"])
+        assert result.exit_code == 2
+        assert "Must provide content" in result.stderr
+
+    def test_create_page_file_not_found(self, mock_config_env: None) -> None:
+        """Test creating a page with non-existent file."""
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "DEV",
+                "--title",
+                "Page",
+                "--body-file",
+                "/nonexistent/file.md",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "File not found" in result.stderr
+
+    def test_create_page_space_not_found(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test creating a page in non-existent space."""
+        # Mock empty results for space lookup
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=NOTFOUND",
+            method="GET",
+            json={"results": []},
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "NOTFOUND",
+                "--title",
+                "Page",
+                "--body",
+                "Content",
+            ],
+        )
+        assert result.exit_code == 1
+        assert "Space not found" in result.stderr
+
+    def test_create_page_unauthorized(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test creating a page with unauthorized credentials."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            status_code=401,
+            json={"message": "Unauthorized"},
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "DEV",
+                "--title",
+                "Page",
+                "--body",
+                "Content",
+            ],
+        )
+        assert result.exit_code == 1
+        assert "Authentication failed" in result.stderr or "Unauthorized" in result.stderr
+
+    def test_create_page_duplicate_title(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test creating a page with duplicate title in space."""
+        space_data = {
+            "id": "98765",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
+        # Mock 400 error for duplicate title
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages",
+            method="POST",
+            status_code=400,
+            json={"message": "A page with this title already exists in the space"},
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "page",
+                "create",
+                "--space",
+                "DEV",
+                "--title",
+                "Duplicate",
+                "--body",
+                "Content",
+            ],
+        )
+        assert result.exit_code == 1
+        assert "400" in result.stderr
