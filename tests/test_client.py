@@ -4,8 +4,9 @@ import base64
 
 import httpx
 import pytest
+from pytest_httpx import HTTPXMock
 
-from confl.client import ApiError, create_client, get_client, handle_api_error
+from confl.client import ApiError, ConfluenceClient, create_client, get_client, handle_api_error
 from confl.config import Config
 
 
@@ -229,3 +230,93 @@ def test_api_error_without_status():
     assert str(error) == "Test error"
     assert error.message == "Test error"
     assert error.status_code is None
+
+
+def test_confluence_client_get_page(httpx_mock: HTTPXMock):
+    """Test getting a page by ID."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock successful response
+    page_data = {
+        "id": "12345",
+        "status": "current",
+        "title": "Test Page",
+        "spaceId": "67890",
+        "body": {
+            "storage": {
+                "value": "<p>Test content</p>",
+                "representation": "storage",
+            },
+            "atlas_doc_format": {
+                "value": '{"type":"doc","content":[]}',
+                "representation": "atlas_doc_format",
+            },
+        },
+        "version": {"number": 1},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345?body-format=storage%2Catlas_doc_format",
+        json=page_data,
+    )
+
+    result = confluence.get_page("12345")
+
+    assert result["id"] == "12345"
+    assert result["title"] == "Test Page"
+    assert result["body"]["storage"]["value"] == "<p>Test content</p>"
+
+
+def test_confluence_client_get_page_not_found(httpx_mock: HTTPXMock):
+    """Test getting a page that doesn't exist."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages/99999?body-format=storage%2Catlas_doc_format",
+        status_code=404,
+        json={"message": "Page not found"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.get_page("99999")
+
+    assert exc_info.value.status_code == 404
+    assert "Not found" in str(exc_info.value)
+
+
+def test_confluence_client_get_page_unauthorized(httpx_mock: HTTPXMock):
+    """Test getting a page with invalid credentials."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="invalid",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345?body-format=storage%2Catlas_doc_format",
+        status_code=401,
+        json={"message": "Invalid credentials"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.get_page("12345")
+
+    assert exc_info.value.status_code == 401
+    assert "Authentication failed" in str(exc_info.value)

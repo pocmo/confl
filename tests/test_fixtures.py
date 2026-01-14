@@ -5,7 +5,6 @@ and provide examples of how to use them in actual tests.
 """
 
 
-
 def test_sample_page_structure(sample_page):
     """Verify sample_page fixture has expected structure."""
     assert sample_page["id"] == "123456"

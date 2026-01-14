@@ -5,6 +5,7 @@ Provides a configured httpx client for making API requests to Confluence.
 
 import base64
 import sys
+from typing import Any, cast
 
 import httpx
 from rich.console import Console
@@ -118,3 +119,39 @@ def handle_api_error(response: httpx.Response) -> None:
         )
     else:
         raise ApiError(f"Unexpected error ({status}): {message}", status_code=status)
+
+
+class ConfluenceClient:
+    """High-level client for Confluence API operations."""
+
+    def __init__(self, client: httpx.Client):
+        """Initialize Confluence client.
+
+        Args:
+            client: Configured httpx client
+        """
+        self.client = client
+
+    def get_page(self, page_id: str) -> dict[str, Any]:
+        """Get a page by ID.
+
+        Args:
+            page_id: Page ID
+
+        Returns:
+            Page data including id, title, body content
+
+        Raises:
+            ApiError: If the request fails
+        """
+        response = self.client.get(
+            f"/pages/{page_id}",
+            params={
+                "body-format": "storage,atlas_doc_format",
+            },
+        )
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
