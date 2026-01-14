@@ -888,3 +888,39 @@ class ConfluenceClient:
 
         result = cast(dict[str, Any], response.json())
         return cast(list[dict[str, Any]], result.get("results", []))
+
+    def search_content(self, cql: str, limit: int = 25) -> list[dict[str, Any]]:
+        """Search for content using CQL (Confluence Query Language).
+
+        Note: Uses v1 API as v2 doesn't support search yet.
+
+        Args:
+            cql: CQL query string (e.g., "space = DEV AND type = page")
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of search result objects with id, title, type, url, etc.
+
+        Raises:
+            ApiError: If the request fails
+        """
+        # Build v1 API URL
+        # Client base is https://{site}/wiki/api/v2
+        # We need https://{site}/wiki/rest/api/search
+        base_url_str = str(self.client.base_url)
+        # Extract site URL (before /wiki)
+        site_url = base_url_str.split("/wiki/")[0]
+        search_url = f"{site_url}/wiki/rest/api/search"
+
+        params: dict[str, Any] = {
+            "cql": cql,
+            "limit": str(limit),
+        }
+
+        response = self.client.get(search_url, params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))

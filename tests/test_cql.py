@@ -1,6 +1,5 @@
 """Tests for CQL query builder utilities."""
 
-
 from confl.cql import _escape_cql_string, _quote_if_needed, build_cql_query
 
 
