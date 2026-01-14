@@ -18,6 +18,7 @@ confl = "confl.cli:app"
 dev = [
     "pytest>=8.0.0",
     "pytest-httpx>=0.30.0",
+    "pytest-cov>=6.0.0",
     "ruff>=0.8.0",
     "mypy>=1.8.0",
 ]
@@ -56,3 +57,16 @@ warn_unused_ignores = true
 disallow_untyped_defs = true
 packages = ["confl"]
 mypy_path = "src"
+
+[tool.pytest.ini_options]
+addopts = "--cov=confl --cov-report=term-missing --cov-branch"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
