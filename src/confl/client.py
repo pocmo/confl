@@ -228,3 +228,29 @@ class ConfluenceClient:
             handle_api_error(response)
 
         return cast(dict[str, Any], response.json())
+
+    def get_space_by_key(self, space_key: str) -> dict[str, Any]:
+        """Get a space by its key.
+
+        Args:
+            space_key: Space key (e.g., "TEAM")
+
+        Returns:
+            Space data including id, key, name, type, and other metadata
+
+        Raises:
+            ApiError: If the request fails or space not found (404)
+        """
+        response = self.client.get("/spaces", params={"keys": space_key})
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        results = cast(list[dict[str, Any]], result.get("results", []))
+
+        # API returns array of results; should have exactly one match
+        if not results:
+            raise ApiError(f"Space not found: {space_key}", status_code=404)
+
+        return results[0]

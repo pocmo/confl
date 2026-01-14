@@ -689,3 +689,115 @@ def test_handle_api_error_409():
     assert exc_info.value.status_code == 409
     assert "Version conflict" in str(exc_info.value)
     assert "modified since you fetched it" in str(exc_info.value)
+
+
+def test_confluence_client_get_space_by_key(httpx_mock: HTTPXMock):
+    """Test getting a space by key."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock successful response
+    space_data = {
+        "results": [
+            {
+                "id": "12345",
+                "key": "TEAM",
+                "name": "Team Space",
+                "type": "global",
+                "status": "current",
+                "authorId": "user123",
+                "homepageId": "67890",
+            }
+        ],
+        "_links": {"base": "https://test.atlassian.net/wiki"},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/spaces?keys=TEAM",
+        json=space_data,
+    )
+
+    result = confluence.get_space_by_key("TEAM")
+
+    assert result["id"] == "12345"
+    assert result["key"] == "TEAM"
+    assert result["name"] == "Team Space"
+    assert result["type"] == "global"
+
+
+def test_confluence_client_get_space_by_key_not_found(httpx_mock: HTTPXMock):
+    """Test getting a space that doesn't exist."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock response with empty results
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/spaces?keys=NONEXIST",
+        json={"results": [], "_links": {"base": "https://test.atlassian.net/wiki"}},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.get_space_by_key("NONEXIST")
+
+    assert exc_info.value.status_code == 404
+    assert "Space not found: NONEXIST" in str(exc_info.value)
+
+
+def test_confluence_client_get_space_by_key_unauthorized(httpx_mock: HTTPXMock):
+    """Test getting a space with invalid credentials."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="invalid",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/spaces?keys=TEAM",
+        status_code=401,
+        json={"message": "Invalid credentials"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.get_space_by_key("TEAM")
+
+    assert exc_info.value.status_code == 401
+    assert "Authentication failed" in str(exc_info.value)
+
+
+def test_confluence_client_get_space_by_key_forbidden(httpx_mock: HTTPXMock):
+    """Test getting a space without proper permissions."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/spaces?keys=PRIVATE",
+        status_code=403,
+        json={"message": "No access to space"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.get_space_by_key("PRIVATE")
+
+    assert exc_info.value.status_code == 403
+    assert "Permission denied" in str(exc_info.value)
