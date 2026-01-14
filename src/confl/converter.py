@@ -1,11 +1,14 @@
 """Markdown to Confluence storage format conversion."""
 
 import html
+import logging
 from typing import Any
 
 import mistune
 from bs4 import Tag
 from markdownify import MarkdownConverter
+
+logger = logging.getLogger(__name__)
 
 
 class ConfluenceStorageRenderer(mistune.HTMLRenderer):
@@ -278,8 +281,62 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         if macro_name == "toc":
             return "_Table of Contents_\n\n"
 
-        # For unknown macros, try to extract text or return nothing
-        return text.strip() + "\n\n" if text.strip() else ""
+        # For unknown macros, handle gracefully
+        return self._handle_unknown_macro(el, macro_name, text, **options)
+
+    def _handle_unknown_macro(self, el: Tag, macro_name: str, text: str, **options: Any) -> str:
+        """Handle unknown Confluence macros gracefully.
+
+        Args:
+            el: The macro element
+            macro_name: Name of the macro
+            text: Extracted text content
+            **options: Additional options
+
+        Returns:
+            Markdown representation of the macro
+        """
+        logger.debug(f"Converting unknown macro: {macro_name}")
+
+        # Try to extract content from rich-text-body
+        rich_body = el.find("ac:rich-text-body")
+        if rich_body is not None:
+            inner_md = self.process_tag(rich_body, **options)  # type: ignore[attr-defined]
+            if inner_md.strip():
+                # For macros with rich content, show a placeholder with content
+                logger.debug(f"Extracted rich-text-body from {macro_name} macro")
+                return f"[{macro_name}]\n\n{inner_md.strip()}\n\n"
+
+        # Try to extract from plain-text-body
+        plain_body = el.find("ac:plain-text-body")
+        if plain_body is not None:
+            plain_text = plain_body.get_text().strip()
+            if plain_text:
+                logger.debug(f"Extracted plain-text-body from {macro_name} macro")
+                return f"[{macro_name}]\n\n{plain_text}\n\n"
+
+        # Try to extract parameter values (for macros that just store data in params)
+        params = []
+        for param in el.find_all("ac:parameter"):
+            param_name = param.get("ac:name", "")
+            param_value = param.get_text().strip()
+            if param_value:
+                params.append(f"{param_name}: {param_value}")
+
+        if params:
+            logger.debug(f"Extracted parameters from {macro_name} macro")
+            param_str = ", ".join(params)
+            return f"[{macro_name}: {param_str}]\n\n"
+
+        # If there's any text content, use it
+        if text.strip():
+            logger.debug(f"Extracted text content from {macro_name} macro")
+            return text.strip() + "\n\n"
+
+        # Last resort: show placeholder for macro with no extractable content
+        # This prevents completely silent failures
+        logger.debug(f"No content extracted from {macro_name} macro, using placeholder")
+        return f"[{macro_name}]\n\n"
 
     def convert_ac_image(self, el: Tag, text: str, **options: Any) -> str:
         """Convert Confluence image tag to Markdown."""

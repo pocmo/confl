@@ -715,6 +715,167 @@ class TestTOCMacro:
         assert "_Table of Contents_" in result
 
 
+class TestUnknownMacros:
+    """Test handling of unknown/unsupported Confluence macros."""
+
+    def test_unknown_macro_with_rich_text_body(self) -> None:
+        """Test unknown macro with rich text content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>This is reusable content.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[excerpt]" in result
+        assert "This is reusable content." in result
+
+    def test_unknown_macro_with_plain_text_body(self) -> None:
+        """Test unknown macro with plain text content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="custom-macro" ac:schema-version="1">
+            <ac:plain-text-body><![CDATA[Plain text content here]]></ac:plain-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[custom-macro]" in result
+        assert "Plain text content here" in result
+
+    def test_unknown_macro_with_parameters(self) -> None:
+        """Test unknown macro with only parameters."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+            <ac:parameter ac:name="server">Company JIRA</ac:parameter>
+            <ac:parameter ac:name="key">PROJ-123</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[jira:" in result
+        # Should contain parameter info
+        assert "server:" in result or "key:" in result
+        assert "PROJ-123" in result or "Company JIRA" in result
+
+    def test_unknown_macro_with_nested_text(self) -> None:
+        """Test unknown macro extracting nested text content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="anchor" ac:schema-version="1">
+            <ac:parameter ac:name="name">section-1</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        # Should not crash and should show some representation
+        assert "[anchor:" in result
+        assert "section-1" in result
+
+    def test_children_macro(self) -> None:
+        """Test children macro (lists child pages)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="children" ac:schema-version="1">
+            <ac:parameter ac:name="all">true</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[children:" in result
+        # Should show placeholder/parameters since we can't list actual children
+        assert "all:" in result or "[children]" in result
+
+    def test_page_tree_macro(self) -> None:
+        """Test page-tree macro (shows page hierarchy)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="pagetree" ac:schema-version="1">
+            <ac:parameter ac:name="root">@self</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[pagetree:" in result
+        # Should show placeholder since we can't generate actual tree
+        assert "root:" in result or "[pagetree]" in result
+
+    def test_unknown_macro_empty(self) -> None:
+        """Test completely empty unknown macro."""
+        from confl.converter import storage_to_markdown
+
+        storage = (
+            '<ac:structured-macro ac:name="empty-macro" '
+            'ac:schema-version="1"></ac:structured-macro>'
+        )
+        result = storage_to_markdown(storage)
+        # Should not crash and should show placeholder
+        assert "[empty-macro]" in result
+
+    def test_unknown_macro_no_crash(self) -> None:
+        """Test that unknown macros never cause crashes."""
+        from confl.converter import storage_to_markdown
+
+        # Test various unknown macro structures
+        test_cases = [
+            '<ac:structured-macro ac:name="unknown1"></ac:structured-macro>',
+            (
+                '<ac:structured-macro ac:name="unknown2">'
+                '<ac:parameter ac:name="test"></ac:parameter>'
+                "</ac:structured-macro>"
+            ),
+            (
+                '<ac:structured-macro ac:name="unknown3">'
+                "<ac:rich-text-body></ac:rich-text-body>"
+                "</ac:structured-macro>"
+            ),
+            (
+                '<ac:structured-macro ac:name="unknown4">'
+                "<ac:plain-text-body></ac:plain-text-body>"
+                "</ac:structured-macro>"
+            ),
+        ]
+
+        for storage in test_cases:
+            # Should not raise any exception
+            result = storage_to_markdown(storage)
+            assert isinstance(result, str)
+            assert len(result) >= 0  # Valid string output
+
+    def test_excerpt_macro_with_content(self) -> None:
+        """Test excerpt macro (reusable content block)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>This excerpt can be reused in other pages.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[excerpt]" in result
+        assert "This excerpt can be reused" in result
+
+    def test_include_macro(self) -> None:
+        """Test include macro (includes content from another page)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="include" ac:schema-version="1">
+            <ac:parameter ac:name="page">Other Page Title</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[include:" in result
+        # Should show what page would be included
+        assert "Other Page Title" in result or "page:" in result
+
+
 class TestRoundTripConversion:
     """Test Markdown -> Storage -> Markdown round-trip conversions."""
 
