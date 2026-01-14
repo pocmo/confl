@@ -809,6 +809,107 @@ class TestJiraMacro:
         assert "for details." in result
 
 
+class TestExcerptMacro:
+    """Test excerpt macro conversion."""
+
+    def test_excerpt_macro_with_rich_text(self) -> None:
+        """Test excerpt macro with formatted content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>This is the excerpt content that can be reused elsewhere.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Excerpt]" in result
+        assert "This is the excerpt content that can be reused elsewhere." in result
+
+    def test_excerpt_macro_with_multiple_paragraphs(self) -> None:
+        """Test excerpt macro with multiple paragraphs."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>First paragraph of excerpt.</p>
+                <p>Second paragraph of excerpt.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Excerpt]" in result
+        assert "First paragraph of excerpt." in result
+        assert "Second paragraph of excerpt." in result
+
+    def test_excerpt_macro_with_formatting(self) -> None:
+        """Test excerpt macro preserves formatting like bold and italic."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>This is <strong>bold</strong> and <em>italic</em> text.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Excerpt]" in result
+        assert "**bold**" in result
+        assert "*italic*" in result
+
+    def test_excerpt_macro_empty(self) -> None:
+        """Test excerpt macro without content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Excerpt]" in result
+
+    def test_excerpt_macro_with_list(self) -> None:
+        """Test excerpt macro with list content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+            <ac:rich-text-body>
+                <ul>
+                    <li>First item</li>
+                    <li>Second item</li>
+                </ul>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Excerpt]" in result
+        assert "First item" in result
+        assert "Second item" in result
+
+    def test_excerpt_macro_in_paragraph(self) -> None:
+        """Test excerpt macro embedded in text content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>Here is an excerpt: 
+        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>Important summary text.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        More text follows.</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "Here is an excerpt:" in result
+        assert "[Excerpt]" in result
+        assert "Important summary text." in result
+        assert "More text follows." in result
+
+
 class TestUnknownMacros:
     """Test handling of unknown/unsupported Confluence macros."""
 
@@ -817,15 +918,15 @@ class TestUnknownMacros:
         from confl.converter import storage_to_markdown
 
         storage = """
-        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
+        <ac:structured-macro ac:name="custom-panel" ac:schema-version="1">
             <ac:rich-text-body>
-                <p>This is reusable content.</p>
+                <p>This is custom content.</p>
             </ac:rich-text-body>
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        assert "[excerpt]" in result
-        assert "This is reusable content." in result
+        assert "[custom-panel]" in result
+        assert "This is custom content." in result
 
     def test_unknown_macro_with_plain_text_body(self) -> None:
         """Test unknown macro with plain text content."""
@@ -939,21 +1040,6 @@ class TestUnknownMacros:
             result = storage_to_markdown(storage)
             assert isinstance(result, str)
             assert len(result) >= 0  # Valid string output
-
-    def test_excerpt_macro_with_content(self) -> None:
-        """Test excerpt macro (reusable content block)."""
-        from confl.converter import storage_to_markdown
-
-        storage = """
-        <ac:structured-macro ac:name="excerpt" ac:schema-version="1">
-            <ac:rich-text-body>
-                <p>This excerpt can be reused in other pages.</p>
-            </ac:rich-text-body>
-        </ac:structured-macro>
-        """
-        result = storage_to_markdown(storage)
-        assert "[excerpt]" in result
-        assert "This excerpt can be reused" in result
 
     def test_include_macro(self) -> None:
         """Test include macro (includes content from another page)."""

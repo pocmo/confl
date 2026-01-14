@@ -308,6 +308,17 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
                 # Macro present but no recognizable parameters
                 return "[Jira]\n\n"
 
+        # Handle excerpt macro (reusable content blocks)
+        if macro_name == "excerpt":
+            # Extract rich-text-body content
+            rich_body = el.find("ac:rich-text-body")
+            if rich_body is not None:
+                # Convert the content inside recursively
+                inner_md = self.process_tag(rich_body, **options)  # type: ignore[attr-defined]
+                return f"[Excerpt]\n\n{inner_md.strip()}\n\n"
+            # If no rich-text-body, just show the label
+            return "[Excerpt]\n\n"
+
         # For unknown macros, handle gracefully
         return self._handle_unknown_macro(el, macro_name, text, **options)
 
@@ -537,6 +548,7 @@ def storage_to_markdown(storage: str) -> str:
         - Expand macros → HTML details/summary
         - TOC macro → italic text placeholder
         - Jira macro → bracketed Jira issue keys or query
+        - Excerpt macro → labeled content block
         - Page links (ac:link with ri:page) → bracketed text
         - User mentions (ri:user) → @username format
 
