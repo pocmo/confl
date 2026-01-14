@@ -1,6 +1,6 @@
 ---
 id: c-ad7d
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T21:23:46Z
@@ -68,3 +68,7 @@ This is a DISCOVERY ticket. Research, document, file follow-ups, then STOP.
 - Look at cli-design.md for already planned entities (space, search, attachment, comment)
 - Some entities may not be worth implementing (too niche, too complex)
 
+
+**2026-01-14T22:07:26Z**
+
+Completed analysis of Confluence API v2 endpoints. Analyzed 146 endpoints across 24 entities. Documented findings in docs/architecture/cli-subcommands.md with priority recommendations (P1: space, attachment, label; P2: comment, blogpost, search; P3: version history, task). Filed 8 follow-up tickets for implementation (3 P1, 3 P2, 2 P3). Key decisions: Focus on core content types, exclude niche/admin features, follow entity-first command pattern.
