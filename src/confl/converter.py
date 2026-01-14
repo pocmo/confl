@@ -281,6 +281,33 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         if macro_name == "toc":
             return "_Table of Contents_\n\n"
 
+        # Handle jira macro (Jira issue integration)
+        if macro_name == "jira":
+            # Extract parameters - can be single key, multiple keys, or JQL query
+            jql_query = ""
+            keys = []
+
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                param_value = param.get_text().strip()
+
+                if param_name == "key":
+                    # Single issue key or comma-separated keys
+                    if param_value:
+                        keys.extend([k.strip() for k in param_value.split(",")])
+                elif param_name == "jqlQuery":
+                    jql_query = param_value
+
+            # Format output based on what we found
+            if jql_query:
+                return f"[Jira query: {jql_query}]\n\n"
+            elif keys:
+                keys_str = ", ".join(keys)
+                return f"[Jira: {keys_str}]\n\n"
+            else:
+                # Macro present but no recognizable parameters
+                return "[Jira]\n\n"
+
         # For unknown macros, handle gracefully
         return self._handle_unknown_macro(el, macro_name, text, **options)
 
@@ -509,6 +536,7 @@ def storage_to_markdown(storage: str) -> str:
         - Status macros → emoji badges
         - Expand macros → HTML details/summary
         - TOC macro → italic text placeholder
+        - Jira macro → bracketed Jira issue keys or query
         - Page links (ac:link with ri:page) → bracketed text
         - User mentions (ri:user) → @username format
 

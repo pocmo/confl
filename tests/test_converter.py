@@ -715,6 +715,100 @@ class TestTOCMacro:
         assert "_Table of Contents_" in result
 
 
+class TestJiraMacro:
+    """Test Confluence Jira macro conversion."""
+
+    def test_jira_macro_single_key(self) -> None:
+        """Test Jira macro with single issue key."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+            <ac:parameter ac:name="key">PROJ-123</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Jira: PROJ-123]" in result
+
+    def test_jira_macro_multiple_keys(self) -> None:
+        """Test Jira macro with multiple issue keys."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+            <ac:parameter ac:name="key">PROJ-123, PROJ-124, PROJ-125</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Jira: PROJ-123, PROJ-124, PROJ-125]" in result
+
+    def test_jira_macro_jql_query(self) -> None:
+        """Test Jira macro with JQL query."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+            <ac:parameter ac:name="jqlQuery">project = PROJ AND status = Open</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Jira query: project = PROJ AND status = Open]" in result
+
+    def test_jira_macro_jql_with_server(self) -> None:
+        """Test Jira macro with JQL query and server parameter."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+            <ac:parameter ac:name="server">Company JIRA</ac:parameter>
+            <ac:parameter ac:name="jqlQuery">assignee = currentUser()</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        # JQL query takes precedence
+        assert "[Jira query: assignee = currentUser()]" in result
+
+    def test_jira_macro_empty(self) -> None:
+        """Test Jira macro with no parameters."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Jira]" in result
+
+    def test_jira_macro_key_with_whitespace(self) -> None:
+        """Test Jira macro with whitespace in key parameter."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+            <ac:parameter ac:name="key">  PROJ-123  ,  PROJ-456  </ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        # Should trim whitespace
+        assert "[Jira: PROJ-123, PROJ-456]" in result
+
+    def test_jira_macro_in_paragraph(self) -> None:
+        """Test Jira macro embedded in text content."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>See related issues: 
+        <ac:structured-macro ac:name="jira" ac:schema-version="1">
+            <ac:parameter ac:name="key">PROJ-123</ac:parameter>
+        </ac:structured-macro>
+        for details.</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "See related issues:" in result
+        assert "[Jira: PROJ-123]" in result
+        assert "for details." in result
+
+
 class TestUnknownMacros:
     """Test handling of unknown/unsupported Confluence macros."""
 
@@ -751,16 +845,16 @@ class TestUnknownMacros:
         from confl.converter import storage_to_markdown
 
         storage = """
-        <ac:structured-macro ac:name="jira" ac:schema-version="1">
-            <ac:parameter ac:name="server">Company JIRA</ac:parameter>
-            <ac:parameter ac:name="key">PROJ-123</ac:parameter>
+        <ac:structured-macro ac:name="custom-widget" ac:schema-version="1">
+            <ac:parameter ac:name="widgetId">widget-123</ac:parameter>
+            <ac:parameter ac:name="color">blue</ac:parameter>
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        assert "[jira:" in result
+        assert "[custom-widget:" in result
         # Should contain parameter info
-        assert "server:" in result or "key:" in result
-        assert "PROJ-123" in result or "Company JIRA" in result
+        assert "widgetId:" in result or "color:" in result
+        assert "widget-123" in result or "blue" in result
 
     def test_unknown_macro_with_nested_text(self) -> None:
         """Test unknown macro extracting nested text content."""
