@@ -7,6 +7,7 @@ from typing import Any
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 
@@ -154,3 +155,55 @@ def get_page(
         # Try to render as markdown for now (will be improved with proper conversion)
         # For now just print the content
         console.print(content)
+
+
+@app.command("list")
+def list_pages(
+    space: str = typer.Option(..., "--space", help="Space key to filter by"),
+    limit: int = typer.Option(25, "--limit", help="Maximum number of results"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON array"),
+) -> None:
+    """List pages in a space.
+
+    Examples:
+        confl page list --space DEV
+        confl page list --space DEV --limit 50
+        confl page list --space DEV --json
+    """
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+        pages = confluence.list_pages(space_key=space, limit=limit)
+    except ApiError as e:
+        err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Output based on flags
+    if json_output:
+        print(json.dumps(pages, indent=2))
+    else:
+        # Rich table output
+        table = Table(show_header=True, header_style="bold cyan")
+        table.add_column("ID", style="dim")
+        table.add_column("Title")
+        table.add_column("Space")
+        table.add_column("Updated")
+
+        for page in pages:
+            page_id = page.get("id", "")
+            title = page.get("title", "Untitled")
+            space_id = page.get("spaceId", "")
+
+            # Extract updated date from version
+            updated = ""
+            version = page.get("version", {})
+            if "createdAt" in version:
+                timestamp = version["createdAt"]
+                updated = timestamp.split("T")[0] if "T" in timestamp else timestamp
+
+            table.add_row(page_id, title, space_id, updated)
+
+        console.print(table)
+
+        if not pages:
+            console.print("[yellow]No pages found in this space.[/yellow]")

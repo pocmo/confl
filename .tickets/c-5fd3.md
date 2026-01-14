@@ -1,6 +1,6 @@
 ---
 id: c-5fd3
-status: open
+status: closed
 deps: [c-f6f4]
 links: []
 created: 2026-01-14T15:58:47Z
@@ -34,3 +34,7 @@ Implement the 'confl page list' command that lists pages, optionally filtered by
 ## Notes
 - Start with basic listing, pagination can be enhanced later if needed
 
+
+**2026-01-14T16:20:11Z**
+
+Completed: Implemented 'confl page list' command with Rich table output, JSON format, custom limits, and comprehensive error handling. Added 7 tests covering all scenarios.

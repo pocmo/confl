@@ -275,3 +275,128 @@ class TestPageGetCommand:
         result = runner.invoke(app, ["page", "get", "12345678", "--markdown"])
         assert result.exit_code == 0
         assert "not yet implemented" in result.stderr.lower()
+
+
+class TestListPages:
+    """Tests for page list command."""
+
+    def test_list_pages_basic(self, httpx_mock: HTTPXMock, mock_config_env):
+        """Test basic page listing with space filter."""
+        pages_data = {
+            "results": [
+                {
+                    "id": "12345678",
+                    "title": "First Page",
+                    "spaceId": "DEV",
+                    "version": {"createdAt": "2026-01-10T10:00:00Z"},
+                },
+                {
+                    "id": "87654321",
+                    "title": "Second Page",
+                    "spaceId": "DEV",
+                    "version": {"createdAt": "2026-01-12T14:30:00Z"},
+                },
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages?limit=25&space-key=DEV",
+            method="GET",
+            json=pages_data,
+        )
+
+        result = runner.invoke(app, ["page", "list", "--space", "DEV"])
+        assert result.exit_code == 0
+        assert "12345678" in result.stdout
+        assert "First Page" in result.stdout
+        assert "87654321" in result.stdout
+        assert "Second Page" in result.stdout
+        assert "2026-01-10" in result.stdout
+        assert "2026-01-12" in result.stdout
+
+    def test_list_pages_json_output(self, httpx_mock: HTTPXMock, mock_config_env):
+        """Test JSON output format."""
+        pages_data = {
+            "results": [
+                {
+                    "id": "12345678",
+                    "title": "Test Page",
+                    "spaceId": "DEV",
+                    "version": {"createdAt": "2026-01-10T10:00:00Z"},
+                }
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages?limit=25&space-key=DEV",
+            method="GET",
+            json=pages_data,
+        )
+
+        result = runner.invoke(app, ["page", "list", "--space", "DEV", "--json"])
+        assert result.exit_code == 0
+
+        # Parse and verify JSON output
+        output_data = json.loads(result.stdout)
+        assert len(output_data) == 1
+        assert output_data[0]["id"] == "12345678"
+        assert output_data[0]["title"] == "Test Page"
+
+    def test_list_pages_custom_limit(self, httpx_mock: HTTPXMock, mock_config_env):
+        """Test custom limit parameter."""
+        pages_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages?limit=50&space-key=DEV",
+            method="GET",
+            json=pages_data,
+        )
+
+        result = runner.invoke(app, ["page", "list", "--space", "DEV", "--limit", "50"])
+        assert result.exit_code == 0
+
+    def test_list_pages_empty_results(self, httpx_mock: HTTPXMock, mock_config_env):
+        """Test handling of empty results."""
+        pages_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages?limit=25&space-key=EMPTY",
+            method="GET",
+            json=pages_data,
+        )
+
+        result = runner.invoke(app, ["page", "list", "--space", "EMPTY"])
+        assert result.exit_code == 0
+        assert "No pages found" in result.stdout
+
+    def test_list_pages_unauthorized(self, httpx_mock: HTTPXMock, mock_config_env):
+        """Test handling of 401 unauthorized error."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages?limit=25&space-key=DEV",
+            method="GET",
+            status_code=401,
+            json={"message": "Unauthorized"},
+        )
+
+        result = runner.invoke(app, ["page", "list", "--space", "DEV"])
+        assert result.exit_code == 1
+        assert "Authentication failed" in result.stderr
+
+    def test_list_pages_forbidden(self, httpx_mock: HTTPXMock, mock_config_env):
+        """Test handling of 403 forbidden error."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages?limit=25&space-key=PRIVATE",
+            method="GET",
+            status_code=403,
+            json={"message": "Forbidden"},
+        )
+
+        result = runner.invoke(app, ["page", "list", "--space", "PRIVATE"])
+        assert result.exit_code == 1
+        assert "Permission denied" in result.stderr
+
+    def test_list_pages_missing_space(self, mock_config_env):
+        """Test that space parameter is required."""
+        result = runner.invoke(app, ["page", "list"])
+        assert result.exit_code != 0
+        # Typer will complain about missing required option
