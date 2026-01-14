@@ -504,3 +504,188 @@ def test_confluence_client_list_pages_forbidden(httpx_mock: HTTPXMock):
 
     assert exc_info.value.status_code == 403
     assert "Permission denied" in str(exc_info.value)
+
+
+def test_confluence_client_update_page(httpx_mock: HTTPXMock):
+    """Test updating a page successfully."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock successful response
+    updated_page_data = {
+        "id": "12345",
+        "status": "current",
+        "title": "Updated Title",
+        "spaceId": "67890",
+        "body": {
+            "storage": {
+                "value": "<p>Updated content</p>",
+                "representation": "storage",
+            },
+        },
+        "version": {"number": 2},
+    }
+
+    httpx_mock.add_response(
+        method="PUT",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345",
+        json=updated_page_data,
+    )
+
+    result = confluence.update_page(
+        page_id="12345",
+        title="Updated Title",
+        body="<p>Updated content</p>",
+        version_number=1,
+    )
+
+    assert result["id"] == "12345"
+    assert result["title"] == "Updated Title"
+    assert result["body"]["storage"]["value"] == "<p>Updated content</p>"
+    assert result["version"]["number"] == 2
+
+    # Verify request payload
+    requests = httpx_mock.get_requests()
+    assert len(requests) == 1
+    request = requests[0]
+    payload = request.read().decode()
+    assert '"Updated Title"' in payload
+    assert '"<p>Updated content</p>"' in payload
+    assert '"number":1' in payload or '"number": 1' in payload
+
+
+def test_confluence_client_update_page_version_conflict(httpx_mock: HTTPXMock):
+    """Test updating a page with version conflict."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="PUT",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345",
+        status_code=409,
+        json={"message": "Version conflict"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.update_page(
+            page_id="12345",
+            title="Updated Title",
+            body="<p>Updated content</p>",
+            version_number=1,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert "Version conflict" in str(exc_info.value)
+    assert "modified since you fetched it" in str(exc_info.value)
+
+
+def test_confluence_client_update_page_not_found(httpx_mock: HTTPXMock):
+    """Test updating a page that doesn't exist."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="PUT",
+        url="https://test.atlassian.net/wiki/api/v2/pages/99999",
+        status_code=404,
+        json={"message": "Page not found"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.update_page(
+            page_id="99999",
+            title="Updated Title",
+            body="<p>Updated content</p>",
+            version_number=1,
+        )
+
+    assert exc_info.value.status_code == 404
+    assert "Not found" in str(exc_info.value)
+
+
+def test_confluence_client_update_page_unauthorized(httpx_mock: HTTPXMock):
+    """Test updating a page with invalid credentials."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="invalid",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="PUT",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345",
+        status_code=401,
+        json={"message": "Invalid credentials"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.update_page(
+            page_id="12345",
+            title="Updated Title",
+            body="<p>Updated content</p>",
+            version_number=1,
+        )
+
+    assert exc_info.value.status_code == 401
+    assert "Authentication failed" in str(exc_info.value)
+
+
+def test_confluence_client_update_page_forbidden(httpx_mock: HTTPXMock):
+    """Test updating a page without proper permissions."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="PUT",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345",
+        status_code=403,
+        json={"message": "Insufficient permissions to edit page"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.update_page(
+            page_id="12345",
+            title="Updated Title",
+            body="<p>Updated content</p>",
+            version_number=1,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert "Permission denied" in str(exc_info.value)
+
+
+def test_handle_api_error_409():
+    """Test handling 409 version conflict error."""
+    response = httpx.Response(
+        status_code=409,
+        json={"message": "Version conflict"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        handle_api_error(response)
+
+    assert exc_info.value.status_code == 409
+    assert "Version conflict" in str(exc_info.value)
+    assert "modified since you fetched it" in str(exc_info.value)

@@ -104,6 +104,13 @@ def handle_api_error(response: httpx.Response) -> None:
         )
     elif status == 404:
         raise ApiError(f"Not found: {message}", status_code=status)
+    elif status == 409:
+        raise ApiError(
+            f"Version conflict: {message}\n"
+            "The page has been modified since you fetched it. "
+            "Fetch the latest version and try again.",
+            status_code=status,
+        )
     elif status == 429:
         raise ApiError(
             f"Rate limit exceeded: {message}\nPlease wait before making more requests",
@@ -180,3 +187,44 @@ class ConfluenceClient:
 
         result = cast(dict[str, Any], response.json())
         return cast(list[dict[str, Any]], result.get("results", []))
+
+    def update_page(
+        self,
+        page_id: str,
+        title: str,
+        body: str,
+        version_number: int,
+    ) -> dict[str, Any]:
+        """Update an existing page's content.
+
+        Args:
+            page_id: Page ID to update
+            title: New page title
+            body: New page body content in storage format
+            version_number: Current version number for optimistic locking
+
+        Returns:
+            Updated page data including id, title, body content, and new version
+
+        Raises:
+            ApiError: If the request fails, including version conflicts (409)
+        """
+        payload = {
+            "id": page_id,
+            "status": "current",
+            "title": title,
+            "body": {
+                "representation": "storage",
+                "value": body,
+            },
+            "version": {
+                "number": version_number,
+            },
+        }
+
+        response = self.client.put(f"/pages/{page_id}", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
