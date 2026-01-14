@@ -1,6 +1,6 @@
 ---
 id: c-b9d5
-status: open
+status: closed
 deps: [c-b143]
 links: []
 created: 2026-01-14T15:58:38Z
@@ -42,3 +42,7 @@ Implement the 'confl page get' command that fetches and displays a single page.
 - Markdown conversion not needed yet, can output storage format or basic rendering
 - URL parsing should extract page ID from Confluence URLs
 
+
+**2026-01-14T16:15:34Z**
+
+Completed: Implemented 'confl page get' command with support for ID/URL references, multiple output formats (default/json/raw/markdown), and comprehensive error handling. Added 14 tests, all 86 tests pass with 96.53% coverage.
