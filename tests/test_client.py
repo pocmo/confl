@@ -263,7 +263,7 @@ def test_confluence_client_get_page(httpx_mock: HTTPXMock):
 
     httpx_mock.add_response(
         method="GET",
-        url="https://test.atlassian.net/wiki/api/v2/pages/12345?body-format=storage%2Catlas_doc_format",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345?body-format=storage",
         json=page_data,
     )
 
@@ -286,7 +286,7 @@ def test_confluence_client_get_page_not_found(httpx_mock: HTTPXMock):
 
     httpx_mock.add_response(
         method="GET",
-        url="https://test.atlassian.net/wiki/api/v2/pages/99999?body-format=storage%2Catlas_doc_format",
+        url="https://test.atlassian.net/wiki/api/v2/pages/99999?body-format=storage",
         status_code=404,
         json={"message": "Page not found"},
     )
@@ -310,7 +310,7 @@ def test_confluence_client_get_page_unauthorized(httpx_mock: HTTPXMock):
 
     httpx_mock.add_response(
         method="GET",
-        url="https://test.atlassian.net/wiki/api/v2/pages/12345?body-format=storage%2Catlas_doc_format",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345?body-format=storage",
         status_code=401,
         json={"message": "Invalid credentials"},
     )

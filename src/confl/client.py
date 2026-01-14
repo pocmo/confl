@@ -154,7 +154,7 @@ class ConfluenceClient:
         response = self.client.get(
             f"/pages/{page_id}",
             params={
-                "body-format": "storage,atlas_doc_format",
+                "body-format": "storage",
             },
         )
 

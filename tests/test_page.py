@@ -74,7 +74,7 @@ class TestPageGetCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=page_data,
         )
@@ -106,7 +106,7 @@ class TestPageGetCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=page_data,
         )
@@ -138,7 +138,7 @@ class TestPageGetCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=page_data,
         )
@@ -173,7 +173,7 @@ class TestPageGetCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=page_data,
         )
@@ -204,7 +204,7 @@ class TestPageGetCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=page_data,
         )
@@ -217,7 +217,7 @@ class TestPageGetCommand:
     def test_get_page_not_found(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test getting a non-existent page."""
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/99999999?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/99999999?body-format=storage",
             method="GET",
             status_code=404,
             json={"message": "Page not found"},
@@ -230,7 +230,7 @@ class TestPageGetCommand:
     def test_get_page_unauthorized(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test getting a page with invalid credentials."""
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             status_code=401,
             json={"message": "Unauthorized"},
@@ -267,7 +267,7 @@ class TestPageGetCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=page_data,
         )
@@ -520,7 +520,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -560,7 +560,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -600,7 +600,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -639,7 +639,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -678,7 +678,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -720,7 +720,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -759,7 +759,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -778,7 +778,7 @@ class TestPageUpdateCommand:
     def test_update_page_not_found(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test updating a page that doesn't exist."""
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/99999999?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/99999999?body-format=storage",
             method="GET",
             status_code=404,
             json={"message": "Page not found"},
@@ -791,7 +791,7 @@ class TestPageUpdateCommand:
     def test_update_page_unauthorized(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test updating a page with invalid credentials."""
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             status_code=401,
             json={"message": "Unauthorized"},
@@ -816,7 +816,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -863,7 +863,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
@@ -906,7 +906,7 @@ class TestPageUpdateCommand:
             },
         }
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage%2Catlas_doc_format",
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
             method="GET",
             json=current_page_data,
         )
