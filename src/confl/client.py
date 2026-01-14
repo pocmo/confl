@@ -502,3 +502,161 @@ class ConfluenceClient:
             return
         else:
             handle_api_error(response)
+
+    def list_attachments(self, page_id: str, limit: int = 25) -> list[dict[str, Any]]:
+        """List attachments on a page.
+
+        Args:
+            page_id: Page ID to list attachments for
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of attachment objects with metadata (id, title, mediaType, fileSize, etc.)
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        response = self.client.get(f"/pages/{page_id}/attachments", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def get_attachment(self, attachment_id: str) -> dict[str, Any]:
+        """Get attachment metadata by ID.
+
+        Args:
+            attachment_id: Attachment ID
+
+        Returns:
+            Attachment metadata including id, title, mediaType, fileSize, downloadLink
+
+        Raises:
+            ApiError: If the request fails or attachment not found (404)
+        """
+        response = self.client.get(f"/attachments/{attachment_id}")
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def download_attachment(self, download_link: str) -> bytes:
+        """Download attachment content.
+
+        Args:
+            download_link: Relative download link from attachment metadata
+
+        Returns:
+            Raw file bytes
+
+        Raises:
+            ApiError: If the download fails
+        """
+        # download_link is relative (e.g., "/wiki/download/attachments/...")
+        # We need to make absolute URL
+        # Client base_url is "https://{site}/wiki/api/v2"
+        # We need "https://{site}/wiki/download/..."
+
+        # Extract site from base URL (before /wiki)
+        base_url_str = str(self.client.base_url)
+        # e.g., "https://example.atlassian.net/wiki/api/v2"
+        # Extract: "https://example.atlassian.net"
+        site_url = base_url_str.split("/wiki/")[0]
+
+        # Make full download URL (download_link already has /wiki prefix)
+        download_url = f"{site_url}{download_link}"
+
+        # Use a separate request (not through base_url) to download
+        response = self.client.get(download_url)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return response.content
+
+    def upload_attachment(
+        self, page_id: str, file_path: str, comment: str | None = None
+    ) -> dict[str, Any]:
+        """Upload a file attachment to a page.
+
+        Note: Uses v1 API as v2 doesn't support upload yet.
+
+        Args:
+            page_id: Page ID to attach file to
+            file_path: Path to file to upload
+            comment: Optional comment for the attachment
+
+        Returns:
+            Attachment metadata from v1 API response
+
+        Raises:
+            ApiError: If the upload fails
+            FileNotFoundError: If file_path doesn't exist
+        """
+        import mimetypes
+        from pathlib import Path
+
+        file = Path(file_path)
+        if not file.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        # Detect MIME type
+        mime_type, _ = mimetypes.guess_type(str(file))
+        if not mime_type:
+            mime_type = "application/octet-stream"
+
+        # Build v1 API URL
+        # Client base is https://{site}/wiki/api/v2
+        # We need https://{site}/wiki/rest/api/content/{pageId}/child/attachment
+        base_url_str = str(self.client.base_url)
+        # Extract site URL (before /wiki)
+        site_url = base_url_str.split("/wiki/")[0]
+        upload_url = f"{site_url}/wiki/rest/api/content/{page_id}/child/attachment"
+
+        # Prepare multipart form data
+        files = {"file": (file.name, file.open("rb"), mime_type)}
+        data = {}
+        if comment:
+            data["comment"] = comment
+
+        # Need X-Atlassian-Token header for CSRF protection
+        headers = {
+            "X-Atlassian-Token": "no-check",
+        }
+
+        # Make request with multipart/form-data
+        response = self.client.post(upload_url, files=files, data=data, headers=headers)
+
+        if response.status_code not in (200, 201):
+            handle_api_error(response)
+
+        # v1 API returns results array
+        result = cast(dict[str, Any], response.json())
+        results = result.get("results", [])
+        if results:
+            return cast(dict[str, Any], results[0])
+        return result
+
+    def delete_attachment(self, attachment_id: str) -> None:
+        """Delete an attachment by ID.
+
+        Args:
+            attachment_id: Attachment ID
+
+        Raises:
+            ApiError: If the request fails (except 404 which is handled gracefully)
+        """
+        response = self.client.delete(f"/attachments/{attachment_id}")
+
+        # Accept both 204 (No Content - successful deletion) and 404 (already gone)
+        if response.status_code == 204:
+            return
+        elif response.status_code == 404:
+            # Attachment already deleted or doesn't exist - that's fine
+            return
+        else:
+            handle_api_error(response)
