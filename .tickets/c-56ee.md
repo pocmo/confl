@@ -1,6 +1,6 @@
 ---
 id: c-56ee
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T15:06:15Z
@@ -38,3 +38,14 @@ Create `docs/architecture/testing.md` that documents our testing strategy.
 ## IMPORTANT
 This is a DISCOVERY ticket. Research, document findings in testing.md, file follow-up tickets, then STOP. Do not implement the testing infrastructure in this ticket.
 
+
+## Notes
+
+**2026-01-14T15:51:09Z**
+
+Research complete. Created docs/architecture/testing.md documenting strategy:
+- pytest-httpx for HTTP mocking (simple, pytest-native)
+- Hand-crafted fixtures (no VCR cassettes)
+- Mock at HTTP layer, not at API wrapper level
+- Unit tests for functions, integration tests for commands
+- Fixtures in conftest.py for reusable responses
