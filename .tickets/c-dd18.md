@@ -1,6 +1,6 @@
 ---
 id: c-dd18
-status: open
+status: closed
 deps: [c-542b, c-41a7]
 links: []
 created: 2026-01-14T15:14:06Z
@@ -32,3 +32,7 @@ Update config loading to fall back to credentials file when env vars are not set
 ## Notes
 - This makes `confl auth login --token` actually useful — stored creds get picked up by all commands
 
+
+**2026-01-14T15:35:57Z**
+
+Completed: Implemented partial override support for configuration. Individual env vars (CONFL_SITE, CONFL_EMAIL, CONFL_TOKEN) can now override specific fields from credentials file. Added 4 new tests covering partial override scenarios.

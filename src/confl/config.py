@@ -35,42 +35,48 @@ def get_config() -> Config:
     - CONFL_EMAIL: Email associated with API token
     - CONFL_TOKEN: API token for authentication
 
+    Individual env vars can override specific fields from credentials file.
+    For example: CONFL_SITE set + credentials file has email/token
+    → uses CONFL_SITE from env + email/token from file
+
     Returns:
         Config object with site, email, and token
 
     Raises:
         ConfigError: If required configuration is missing or invalid
     """
-    # Try environment variables first
-    # Use 'in' to distinguish between unset and empty string
-    site = os.environ.get("CONFL_SITE")
-    email = os.environ.get("CONFL_EMAIL")
-    token = os.environ.get("CONFL_TOKEN")
-
+    # Check which env vars are set
     site_set = "CONFL_SITE" in os.environ
     email_set = "CONFL_EMAIL" in os.environ
     token_set = "CONFL_TOKEN" in os.environ
 
-    # If all env vars are set (even if empty), try to use them and let validation handle errors
+    # Get env var values (may be empty string)
+    site_env = os.environ.get("CONFL_SITE")
+    email_env = os.environ.get("CONFL_EMAIL")
+    token_env = os.environ.get("CONFL_TOKEN")
+
+    # If all env vars are set, use them directly
     if site_set and email_set and token_set:
-        return _validate_and_create_config(site or "", email or "", token or "")
+        return _validate_and_create_config(site_env or "", email_env or "", token_env or "")
 
-    # If some but not all env vars are set, that's an error
+    # If some env vars are set, merge with credentials file
     if site_set or email_set or token_set:
-        missing = []
-        if not site_set:
-            missing.append("CONFL_SITE")
-        if not email_set:
-            missing.append("CONFL_EMAIL")
-        if not token_set:
-            missing.append("CONFL_TOKEN")
-        raise ConfigError(
-            f"Incomplete environment configuration. Missing: {', '.join(missing)}\n"
-            "Either set all three environment variables, "
-            "or use 'confl auth login' to store credentials."
-        )
+        creds = load_credentials()
+        if creds is None:
+            raise ConfigError(
+                "Partial environment configuration requires credentials file.\n"
+                "Missing credentials file. Run 'confl auth login' to store credentials."
+            )
 
-    # Fall back to credentials file
+        # Use env vars where set, fall back to credentials file
+        # Use 'or ""' to handle case where env var is set but empty
+        site = (site_env or "") if site_set else creds["site"]
+        email = (email_env or "") if email_set else creds["email"]
+        token = (token_env or "") if token_set else creds["token"]
+
+        return _validate_and_create_config(site, email, token)
+
+    # No env vars set, fall back to credentials file only
     creds = load_credentials()
     if creds is None:
         raise ConfigError(

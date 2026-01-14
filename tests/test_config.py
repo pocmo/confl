@@ -102,15 +102,14 @@ def test_missing_all_config_raises_error(clean_env: None, tmp_path: Path) -> Non
     assert "confl auth login" in str(exc_info.value)
 
 
-def test_partial_env_vars_raises_error(clean_env: None) -> None:
-    """Test that partial environment configuration raises error."""
+def test_partial_env_vars_without_credentials_raises_error(clean_env: None) -> None:
+    """Test that partial env vars without credentials file raises error."""
     with patch.dict(os.environ, {"CONFL_SITE": "mycompany.atlassian.net"}):
         with pytest.raises(ConfigError) as exc_info:
             get_config()
 
-        assert "Incomplete environment configuration" in str(exc_info.value)
-        assert "CONFL_EMAIL" in str(exc_info.value)
-        assert "CONFL_TOKEN" in str(exc_info.value)
+        assert "Partial environment configuration" in str(exc_info.value)
+        assert "credentials file" in str(exc_info.value)
 
 
 def test_invalid_site_with_protocol_raises_error(clean_env: None) -> None:
@@ -186,3 +185,78 @@ def test_config_is_immutable() -> None:
     # dataclass frozen=True raises FrozenInstanceError (subclass of AttributeError)
     with pytest.raises(AttributeError):
         config.site = "other-site.atlassian.net"  # type: ignore
+
+
+def test_partial_override_site_only(clean_env: None, temp_credentials_file: Path) -> None:
+    """Test overriding only site with env var."""
+    # Write credentials file
+    creds = {
+        "site": "file-site.atlassian.net",
+        "email": "file@example.com",
+        "token": "file-token",
+    }
+    with open(temp_credentials_file, "wb") as f:
+        tomli_w.dump(creds, f)
+
+    # Override only site
+    with patch.dict(os.environ, {"CONFL_SITE": "env-site.atlassian.net"}):
+        config = get_config()
+        assert config.site == "env-site.atlassian.net"
+        assert config.email == "file@example.com"
+        assert config.token == "file-token"
+
+
+def test_partial_override_email_only(clean_env: None, temp_credentials_file: Path) -> None:
+    """Test overriding only email with env var."""
+    creds = {
+        "site": "file-site.atlassian.net",
+        "email": "file@example.com",
+        "token": "file-token",
+    }
+    with open(temp_credentials_file, "wb") as f:
+        tomli_w.dump(creds, f)
+
+    # Override only email
+    with patch.dict(os.environ, {"CONFL_EMAIL": "env@example.com"}):
+        config = get_config()
+        assert config.site == "file-site.atlassian.net"
+        assert config.email == "env@example.com"
+        assert config.token == "file-token"
+
+
+def test_partial_override_token_only(clean_env: None, temp_credentials_file: Path) -> None:
+    """Test overriding only token with env var."""
+    creds = {
+        "site": "file-site.atlassian.net",
+        "email": "file@example.com",
+        "token": "file-token",
+    }
+    with open(temp_credentials_file, "wb") as f:
+        tomli_w.dump(creds, f)
+
+    # Override only token
+    with patch.dict(os.environ, {"CONFL_TOKEN": "env-token"}):
+        config = get_config()
+        assert config.site == "file-site.atlassian.net"
+        assert config.email == "file@example.com"
+        assert config.token == "env-token"
+
+
+def test_partial_override_site_and_email(clean_env: None, temp_credentials_file: Path) -> None:
+    """Test overriding site and email with env vars."""
+    creds = {
+        "site": "file-site.atlassian.net",
+        "email": "file@example.com",
+        "token": "file-token",
+    }
+    with open(temp_credentials_file, "wb") as f:
+        tomli_w.dump(creds, f)
+
+    # Override site and email
+    with patch.dict(
+        os.environ, {"CONFL_SITE": "env-site.atlassian.net", "CONFL_EMAIL": "env@example.com"}
+    ):
+        config = get_config()
+        assert config.site == "env-site.atlassian.net"
+        assert config.email == "env@example.com"
+        assert config.token == "file-token"
