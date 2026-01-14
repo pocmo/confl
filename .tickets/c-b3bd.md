@@ -1,6 +1,6 @@
 ---
 id: c-b3bd
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T15:59:14Z
@@ -31,3 +31,7 @@ Add delete_page() method to ConfluenceClient that deletes a page.
 ## Notes
 - Deletion in Confluence may be soft delete (moved to trash)
 
+
+**2026-01-14T16:41:15Z**
+
+Completed: Added delete_page() method with graceful 404 handling and comprehensive tests

@@ -801,3 +801,103 @@ def test_confluence_client_get_space_by_key_forbidden(httpx_mock: HTTPXMock):
 
     assert exc_info.value.status_code == 403
     assert "Permission denied" in str(exc_info.value)
+
+
+def test_confluence_client_delete_page_success(httpx_mock: HTTPXMock):
+    """Test deleting a page successfully."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="DELETE",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345",
+        status_code=204,
+    )
+
+    # Should not raise any exception
+    result = confluence.delete_page("12345")
+
+    # Should return None
+    assert result is None
+
+    # Verify the request was made
+    requests = httpx_mock.get_requests()
+    assert len(requests) == 1
+    assert requests[0].method == "DELETE"
+
+
+def test_confluence_client_delete_page_already_deleted(httpx_mock: HTTPXMock):
+    """Test deleting a page that's already deleted or doesn't exist (404)."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="DELETE",
+        url="https://test.atlassian.net/wiki/api/v2/pages/99999",
+        status_code=404,
+        json={"message": "Page not found"},
+    )
+
+    # Should not raise any exception - 404 is handled gracefully
+    result = confluence.delete_page("99999")
+
+    # Should return None
+    assert result is None
+
+
+def test_confluence_client_delete_page_unauthorized(httpx_mock: HTTPXMock):
+    """Test deleting a page with invalid credentials."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="DELETE",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345",
+        status_code=401,
+        json={"message": "Invalid credentials"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.delete_page("12345")
+
+    assert exc_info.value.status_code == 401
+    assert "Authentication failed" in str(exc_info.value)
+
+
+def test_confluence_client_delete_page_forbidden(httpx_mock: HTTPXMock):
+    """Test deleting a page without proper permissions."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="DELETE",
+        url="https://test.atlassian.net/wiki/api/v2/pages/12345",
+        status_code=403,
+        json={"message": "Insufficient permissions"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.delete_page("12345")
+
+    assert exc_info.value.status_code == 403
+    assert "Permission denied" in str(exc_info.value)

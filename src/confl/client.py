@@ -254,3 +254,28 @@ class ConfluenceClient:
             raise ApiError(f"Space not found: {space_key}", status_code=404)
 
         return results[0]
+
+    def delete_page(self, page_id: str) -> None:
+        """Delete a page by ID.
+
+        Args:
+            page_id: Page ID to delete
+
+        Raises:
+            ApiError: If the request fails (except 404 which is handled gracefully)
+
+        Note:
+            Deletion in Confluence typically moves the page to trash (soft delete).
+            404 errors are handled gracefully since the end result is the same:
+            the page no longer exists.
+        """
+        response = self.client.delete(f"/pages/{page_id}")
+
+        # Accept both 204 (No Content - successful deletion) and 404 (already gone)
+        if response.status_code == 204:
+            return
+        elif response.status_code == 404:
+            # Page already deleted or doesn't exist - that's fine
+            return
+        else:
+            handle_api_error(response)
