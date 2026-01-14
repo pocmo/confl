@@ -338,6 +338,40 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         logger.debug(f"No content extracted from {macro_name} macro, using placeholder")
         return f"[{macro_name}]\n\n"
 
+    def convert_ac_link(self, el: Tag, text: str, **options: Any) -> str:
+        """Convert Confluence page link to Markdown.
+
+        Handles <ac:link> tags with <ri:page> references.
+        Shows link text in brackets: [Page Title]
+
+        Example Confluence format:
+            <ac:link ac:card-appearance="inline">
+                <ri:page ri:space-key="PM" ri:content-title="Page Title" />
+                <ac:link-body>Page Title</ac:link-body>
+            </ac:link>
+
+        Result: [Page Title]
+        """
+        # Extract link text from ac:link-body
+        link_body = el.find("ac:link-body")
+        if link_body is not None:
+            link_text = link_body.get_text().strip()
+            if link_text:
+                return f"[{link_text}]"
+
+        # Fallback: try to get page title from ri:page attributes
+        ri_page = el.find("ri:page")
+        if ri_page is not None:
+            content_title = ri_page.get("ri:content-title", "")
+            if content_title:
+                return f"[{content_title}]"
+
+        # Last resort: return any text content
+        if text.strip():
+            return f"[{text.strip()}]"
+
+        return "[Page Link]"
+
     def convert_ac_image(self, el: Tag, text: str, **options: Any) -> str:
         """Convert Confluence image tag to Markdown."""
         # Try to find ri:url (external image)
@@ -381,7 +415,7 @@ def storage_to_markdown(storage: str) -> str:
         - Lists (ordered and unordered)
         - Code blocks (including code macro with syntax)
         - Inline code
-        - Links
+        - Links (standard HTML and Confluence page links)
         - Images (both external URLs and attachments)
         - Tables
         - Block quotes
@@ -390,6 +424,7 @@ def storage_to_markdown(storage: str) -> str:
         - Status macros → emoji badges
         - Expand macros → HTML details/summary
         - TOC macro → italic text placeholder
+        - Page links (ac:link with ri:page) → bracketed text
 
     Partial support:
         - Unknown macros → text content or omitted
@@ -397,7 +432,6 @@ def storage_to_markdown(storage: str) -> str:
     Limitations:
         - Complex Confluence macros may not convert cleanly
         - Nested macros may lose formatting
-        - Page links require special handling
 
     Example:
         >>> storage = "<h1>Hello</h1><p>This is <strong>bold</strong>.</p>"

@@ -908,3 +908,103 @@ class TestRoundTripConversion:
         result = storage_to_markdown(storage)
         assert "```python" in result or "```" in result
         assert "print('test')" in result
+
+
+class TestConfluencePageLinks:
+    """Test Confluence page link conversion."""
+
+    def test_page_link_with_link_body(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link ac:card-appearance="inline">
+            <ri:page ri:space-key="PM" ri:content-title="Project Overview" />
+            <ac:link-body>Project Overview</ac:link-body>
+        </ac:link>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Project Overview]" in result
+
+    def test_page_link_without_link_body(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link>
+            <ri:page ri:space-key="DEV" ri:content-title="API Documentation" />
+        </ac:link>
+        """
+        result = storage_to_markdown(storage)
+        assert "[API Documentation]" in result
+
+    def test_page_link_in_paragraph(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>For more information, see <ac:link>
+            <ri:page ri:content-title="Getting Started" />
+            <ac:link-body>Getting Started</ac:link-body>
+        </ac:link> guide.</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "For more information, see [Getting Started] guide." in result
+
+    def test_page_link_card_appearance(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link ac:card-appearance="block">
+            <ri:page ri:space-key="DOCS" ri:content-title="Installation Guide" />
+            <ac:link-body>Installation Guide</ac:link-body>
+        </ac:link>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Installation Guide]" in result
+
+    def test_multiple_page_links(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>See <ac:link>
+            <ri:page ri:content-title="Page 1" />
+            <ac:link-body>Page 1</ac:link-body>
+        </ac:link> and <ac:link>
+            <ri:page ri:content-title="Page 2" />
+            <ac:link-body>Page 2</ac:link-body>
+        </ac:link> for details.</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page 1]" in result
+        assert "[Page 2]" in result
+        assert "for details" in result
+
+    def test_page_link_with_special_characters(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link>
+            <ri:page ri:content-title="FAQ &amp; Help" />
+            <ac:link-body>FAQ &amp; Help</ac:link-body>
+        </ac:link>
+        """
+        result = storage_to_markdown(storage)
+        assert "[FAQ & Help]" in result
+
+    def test_page_link_fallback_to_text(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: link with only text content
+        storage = """
+        <ac:link>Some Link Text</ac:link>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Some Link Text]" in result
+
+    def test_page_link_empty_fallback(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: completely empty link
+        storage = """
+        <ac:link></ac:link>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page Link]" in result
