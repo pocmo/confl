@@ -240,6 +240,59 @@ class TestPageGetCommand:
         assert result.exit_code == 1
         assert "Authentication failed" in result.stderr
 
+    def test_get_page_error_with_json_flag(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test that error output is JSON when --json flag is used."""
+        error_response = {
+            "errors": [
+                {
+                    "status": 404,
+                    "code": "NOT_FOUND",
+                    "title": "Page not found",
+                    "detail": "The page with ID 99999999 does not exist",
+                }
+            ]
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/99999999?body-format=storage",
+            method="GET",
+            status_code=404,
+            json=error_response,
+        )
+
+        result = runner.invoke(app, ["page", "get", "99999999", "--json"])
+        assert result.exit_code == 1
+        # Error should be JSON in stderr
+        error_json = json.loads(result.stderr)
+        assert "errors" in error_json
+        assert error_json["errors"][0]["code"] == "NOT_FOUND"
+
+    def test_get_page_error_confluence_v2_format(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test handling of Confluence API v2 structured error format."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
+            method="GET",
+            status_code=409,
+            json={
+                "errors": [
+                    {
+                        "status": 409,
+                        "code": "CONFLICT",
+                        "title": "Version must be incremented",
+                        "detail": "Current version is 5, provided version is 5",
+                    }
+                ]
+            },
+        )
+
+        result = runner.invoke(app, ["page", "get", "12345678"])
+        assert result.exit_code == 1
+        assert "Version conflict" in result.stderr
+        assert "Version must be incremented" in result.stderr
+
     def test_get_page_invalid_reference(self, mock_config_env: None) -> None:
         """Test getting a page with invalid reference."""
         result = runner.invoke(app, ["page", "get", "invalid-reference"])

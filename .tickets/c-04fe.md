@@ -1,6 +1,6 @@
 ---
 id: c-04fe
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T20:30:16Z
@@ -38,3 +38,7 @@ Replace raw JSON error dumps with formatted, human-readable error messages.
 - Can use Rich Console.print() with [red] styling for errors
 - Example: 'Error: Page not found (404)' instead of full JSON response
 
+
+**2026-01-14T21:09:13Z**
+
+Completed: Implemented user-friendly error formatting for API errors. Enhanced handle_api_error() to parse Confluence API v2 structured error format with errors array. Added response_data field to ApiError class. Updated all commands to output raw JSON errors to stderr when --json flag is used. Added comprehensive tests for structured error parsing and JSON error output. All 239 tests pass.

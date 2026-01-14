@@ -186,7 +186,12 @@ def get_page(
         confluence = ConfluenceClient(client)
         page = confluence.get_page(page_id)
     except ApiError as e:
-        err_console.print(f"[red]Error:[/red] {e.message}")
+        if json_output and e.response_data:
+            # Output raw error JSON to stderr
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            # Human-readable error message
+            err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
     # Output based on flags
@@ -244,7 +249,12 @@ def list_pages(
         confluence = ConfluenceClient(client)
         pages = confluence.list_pages(space_key=space, limit=limit)
     except ApiError as e:
-        err_console.print(f"[red]Error:[/red] {e.message}")
+        if json_output and e.response_data:
+            # Output raw error JSON to stderr
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            # Human-readable error message
+            err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
     # Output based on flags
@@ -302,7 +312,12 @@ def delete_page(
         confluence = ConfluenceClient(client)
         confluence.delete_page(page_id)
     except ApiError as e:
-        err_console.print(f"[red]Error:[/red] {e.message}")
+        if json_output and e.response_data:
+            # Output raw error JSON to stderr
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            # Human-readable error message
+            err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
     # Output success
@@ -373,7 +388,12 @@ def create_page(
             err_console.print(f"[red]Error:[/red] Could not get space ID for space: {space}")
             sys.exit(1)
     except ApiError as e:
-        err_console.print(f"[red]Error:[/red] {e.message}")
+        if json_output and e.response_data:
+            # Output raw error JSON to stderr
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            # Human-readable error message
+            err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
     # Create the page
@@ -385,7 +405,12 @@ def create_page(
             parent_id=parent,
         )
     except ApiError as e:
-        err_console.print(f"[red]Error:[/red] {e.message}")
+        if json_output and e.response_data:
+            # Output raw error JSON to stderr
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            # Human-readable error message
+            err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
     # Output success
@@ -469,7 +494,12 @@ def update_page(
         confluence = ConfluenceClient(client)
         current_page = confluence.get_page(page_id)
     except ApiError as e:
-        err_console.print(f"[red]Error:[/red] {e.message}")
+        if json_output and e.response_data:
+            # Output raw error JSON to stderr
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            # Human-readable error message
+            err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
     # Get current version number for optimistic locking
@@ -495,7 +525,12 @@ def update_page(
             version_number=version_number + 1,
         )
     except ApiError as e:
-        err_console.print(f"[red]Error:[/red] {e.message}")
+        if json_output and e.response_data:
+            # Output raw error JSON to stderr
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            # Human-readable error message
+            err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
     # Output success

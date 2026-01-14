@@ -18,16 +18,23 @@ console = Console(stderr=True)
 class ApiError(Exception):
     """Raised when Confluence API returns an error."""
 
-    def __init__(self, message: str, status_code: int | None = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        response_data: dict[str, Any] | None = None,
+    ):
         """Initialize API error.
 
         Args:
             message: Human-readable error message
             status_code: HTTP status code if available
+            response_data: Raw API error response data (for --json output)
         """
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+        self.response_data = response_data
 
 
 def get_client() -> httpx.Client:
@@ -83,12 +90,40 @@ def handle_api_error(response: httpx.Response) -> None:
         ApiError: Always raised with appropriate message
     """
     status = response.status_code
+    error_data = None
 
-    # Try to extract error message from response body
+    # Try to parse structured error response
+    # Confluence API v2 format:
+    # {"errors": [{"status": 404, "code": "...", "title": "...", "detail": "..."}]}
     try:
         error_data = response.json()
-        message = error_data["message"] if "message" in error_data else str(error_data)
+
+        # Extract first error from errors array if present
+        if isinstance(error_data, dict) and "errors" in error_data:
+            errors = error_data["errors"]
+            if errors and len(errors) > 0:
+                first_error = errors[0]
+                # Build message from title and detail
+                title = first_error.get("title", "")
+                detail = first_error.get("detail", "")
+                if title and detail:
+                    message = f"{title}\n{detail}"
+                elif title:
+                    message = title
+                elif detail:
+                    message = detail
+                else:
+                    message = str(first_error)
+            else:
+                message = str(error_data)
+        # Fallback: look for "message" field
+        elif isinstance(error_data, dict) and "message" in error_data:
+            message = error_data["message"]
+        else:
+            message = str(error_data)
     except Exception:
+        # Failed to parse JSON - use raw text
+        error_data = None
         message = response.text or f"HTTP {status}"
 
     # Provide context based on status code
@@ -96,36 +131,47 @@ def handle_api_error(response: httpx.Response) -> None:
         raise ApiError(
             f"Authentication failed: {message}\nCheck your credentials with 'confl auth status'",
             status_code=status,
+            response_data=error_data,
         )
     elif status == 403:
         raise ApiError(
             f"Permission denied: {message}\nYour credentials may not have access to this resource",
             status_code=status,
+            response_data=error_data,
         )
     elif status == 404:
-        raise ApiError(f"Not found: {message}", status_code=status)
+        raise ApiError(f"Not found: {message}", status_code=status, response_data=error_data)
     elif status == 409:
         raise ApiError(
             f"Version conflict: {message}\n"
             "The page has been modified since you fetched it. "
             "Fetch the latest version and try again.",
             status_code=status,
+            response_data=error_data,
         )
     elif status == 429:
         raise ApiError(
             f"Rate limit exceeded: {message}\nPlease wait before making more requests",
             status_code=status,
+            response_data=error_data,
         )
     elif 400 <= status < 500:
-        raise ApiError(f"Client error ({status}): {message}", status_code=status)
+        raise ApiError(
+            f"Client error ({status}): {message}", status_code=status, response_data=error_data
+        )
     elif 500 <= status < 600:
         raise ApiError(
             f"Server error ({status}): {message}\n"
             "Confluence API is experiencing issues. Please try again later.",
             status_code=status,
+            response_data=error_data,
         )
     else:
-        raise ApiError(f"Unexpected error ({status}): {message}", status_code=status)
+        raise ApiError(
+            f"Unexpected error ({status}): {message}",
+            status_code=status,
+            response_data=error_data,
+        )
 
 
 class ConfluenceClient:

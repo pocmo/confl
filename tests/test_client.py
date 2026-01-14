@@ -221,6 +221,17 @@ def test_api_error_properties():
     assert str(error) == "Test error message"
     assert error.message == "Test error message"
     assert error.status_code == 404
+    assert error.response_data is None
+
+
+def test_api_error_with_response_data():
+    """Test ApiError with response_data."""
+    response_data = {"errors": [{"status": 404, "code": "NOT_FOUND", "title": "Page not found"}]}
+    error = ApiError("Not found: Page not found", status_code=404, response_data=response_data)
+
+    assert error.message == "Not found: Page not found"
+    assert error.status_code == 404
+    assert error.response_data == response_data
 
 
 def test_api_error_without_status():
@@ -230,6 +241,74 @@ def test_api_error_without_status():
     assert str(error) == "Test error"
     assert error.message == "Test error"
     assert error.status_code is None
+
+
+def test_handle_api_error_confluence_v2_format():
+    """Test handling Confluence API v2 structured error format with errors array."""
+    response = httpx.Response(
+        status_code=404,
+        json={
+            "errors": [
+                {
+                    "status": 404,
+                    "code": "NOT_FOUND",
+                    "title": "Page not found",
+                    "detail": "The page with ID 12345 does not exist",
+                }
+            ]
+        },
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        handle_api_error(response)
+
+    assert exc_info.value.status_code == 404
+    assert "Not found" in str(exc_info.value)
+    assert "Page not found" in str(exc_info.value)
+    assert "The page with ID 12345 does not exist" in str(exc_info.value)
+    assert exc_info.value.response_data is not None
+    assert "errors" in exc_info.value.response_data
+
+
+def test_handle_api_error_confluence_v2_format_title_only():
+    """Test handling Confluence API v2 error with only title field."""
+    response = httpx.Response(
+        status_code=409,
+        json={
+            "errors": [
+                {
+                    "status": 409,
+                    "code": "CONFLICT",
+                    "title": (
+                        "Version must be incremented when updating a page. "
+                        "Current Version: [5]. Provided version: [5]"
+                    ),
+                    "detail": None,
+                }
+            ]
+        },
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        handle_api_error(response)
+
+    assert exc_info.value.status_code == 409
+    assert "Version conflict" in str(exc_info.value)
+    assert "Version must be incremented" in str(exc_info.value)
+
+
+def test_handle_api_error_confluence_v2_format_empty_errors():
+    """Test handling Confluence API v2 error with empty errors array."""
+    response = httpx.Response(
+        status_code=400,
+        json={"errors": []},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        handle_api_error(response)
+
+    assert exc_info.value.status_code == 400
+    assert "Client error (400)" in str(exc_info.value)
 
 
 def test_confluence_client_get_page(httpx_mock: HTTPXMock):
