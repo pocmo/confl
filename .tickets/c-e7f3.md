@@ -1,6 +1,6 @@
 ---
 id: c-e7f3
-status: open
+status: closed
 deps: [c-60b9, c-b143]
 links: []
 created: 2026-01-14T15:59:38Z
@@ -39,3 +39,7 @@ Implement the 'confl page update' command that updates an existing page.
 - Must fetch current version before updating (optimistic locking)
 - Depends on Markdown conversion capability (or start with --raw only)
 
+
+**2026-01-14T16:47:52Z**
+
+Completed: Implemented 'confl page update' command with full markdown conversion support, stdin/file/inline content input, optional title updates, version conflict handling, and comprehensive test coverage (15 tests).

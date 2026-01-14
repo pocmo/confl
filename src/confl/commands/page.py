@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
+from confl.converter import markdown_to_storage
 
 app = typer.Typer(help="Manage pages")
 console = Console()
@@ -242,3 +243,104 @@ def delete_page(
         print(json.dumps(result, indent=2))
     else:
         console.print(f"[green]✓[/green] Page {page_id} deleted successfully")
+
+
+@app.command("update")
+def update_page(
+    ref: str = typer.Argument(..., help="Page ID or URL"),
+    body: str = typer.Option(None, "--body", help="Page content (Markdown by default)"),
+    body_file: str = typer.Option(None, "--body-file", help="Read content from file"),
+    title: str = typer.Option(
+        None, "--title", help="New page title (keep existing if not provided)"
+    ),
+    raw: bool = typer.Option(False, "--raw", help="Provide content in storage format directly"),
+    json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+) -> None:
+    """Update an existing page's content and/or title.
+
+    Examples:
+        confl page update 12345678 --body "# Updated content"
+        confl page update 12345678 --body-file content.md
+        cat content.md | confl page update 12345678
+        confl page update 12345678 --title "New Title"
+        confl page update 12345678 --body "Content" --title "New Title"
+        confl page update 12345678 --body "<p>HTML</p>" --raw
+    """
+    # Extract page ID
+    try:
+        page_id = _extract_page_id(ref)
+    except ValueError as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(2)
+
+    # Get content from various sources
+    content = None
+    if body:
+        content = body
+    elif body_file:
+        try:
+            with open(body_file, encoding="utf-8") as f:
+                content = f.read()
+        except FileNotFoundError:
+            err_console.print(f"[red]Error:[/red] File not found: {body_file}")
+            sys.exit(2)
+        except Exception as e:
+            err_console.print(f"[red]Error:[/red] Failed to read file: {e}")
+            sys.exit(2)
+    elif not sys.stdin.isatty():
+        # Read from stdin
+        stdin_content = sys.stdin.read()
+        # Only use stdin if it's not empty
+        if stdin_content and stdin_content.strip():
+            content = stdin_content
+
+    # Must provide either content or title
+    if content is None and title is None:
+        err_console.print(
+            "[red]Error:[/red] Must provide content via --body, --body-file, stdin, or --title"
+        )
+        sys.exit(2)
+
+    # Get current page to fetch version and existing title/content
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+        current_page = confluence.get_page(page_id)
+    except ApiError as e:
+        err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Get current version number for optimistic locking
+    version_number = current_page.get("version", {}).get("number", 1)
+
+    # Use provided title or keep existing
+    new_title = title if title is not None else current_page.get("title", "Untitled")
+
+    # Process content
+    if content is not None:
+        # Convert markdown to storage format unless --raw
+        storage_content = content if raw else markdown_to_storage(content)
+    else:
+        # No new content provided, keep existing
+        storage_content = _get_page_content(current_page, "storage")
+
+    # Update the page
+    try:
+        updated_page = confluence.update_page(
+            page_id=page_id,
+            title=new_title,
+            body=storage_content,
+            version_number=version_number + 1,
+        )
+    except ApiError as e:
+        err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Output success
+    if json_output:
+        print(json.dumps(updated_page, indent=2))
+    else:
+        new_version = updated_page.get("version", {}).get("number", "")
+        console.print(
+            f"[green]✓[/green] Page {page_id} updated successfully (version {new_version})"
+        )
