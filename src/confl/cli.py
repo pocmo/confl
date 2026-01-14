@@ -2,7 +2,7 @@
 
 import typer
 
-from confl.commands import auth, page
+from confl.commands import auth, page, space
 
 app = typer.Typer(
     name="confl",
@@ -13,6 +13,7 @@ app = typer.Typer(
 # Register command groups
 app.add_typer(auth.app, name="auth")
 app.add_typer(page.app, name="page")
+app.add_typer(space.app, name="space")
 
 
 @app.callback()

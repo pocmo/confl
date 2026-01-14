@@ -366,3 +366,139 @@ class ConfluenceClient:
             return
         else:
             handle_api_error(response)
+
+    def list_spaces(
+        self,
+        limit: int = 25,
+        type_filter: str | None = None,
+        status_filter: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List spaces with optional filtering.
+
+        Args:
+            limit: Maximum number of results to return (default 25)
+            type_filter: Optional filter by space type (global, personal)
+            status_filter: Optional filter by space status (current, archived)
+
+        Returns:
+            List of space objects with metadata (id, key, name, type, status)
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        if type_filter:
+            params["type"] = type_filter
+        if status_filter:
+            params["status"] = status_filter
+
+        response = self.client.get("/spaces", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def get_space(self, space_ref: str) -> dict[str, Any]:
+        """Get a space by key or ID.
+
+        Args:
+            space_ref: Space key or numeric ID
+
+        Returns:
+            Space data including id, key, name, type, status, description
+
+        Raises:
+            ApiError: If the request fails or space not found (404)
+        """
+        # API accepts both IDs and keys in the same endpoint
+        response = self.client.get(f"/spaces/{space_ref}")
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def create_space(self, key: str, name: str, description: str | None = None) -> dict[str, Any]:
+        """Create a new space.
+
+        Args:
+            key: Space key (unique short identifier)
+            name: Space name
+            description: Optional space description
+
+        Returns:
+            Created space data including id, key, name
+
+        Raises:
+            ApiError: If the request fails (e.g., duplicate key, invalid parameters)
+        """
+        payload: dict[str, Any] = {
+            "key": key,
+            "name": name,
+        }
+
+        if description:
+            payload["description"] = {"plain": {"value": description, "representation": "plain"}}
+
+        response = self.client.post("/spaces", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def update_space(
+        self, space_ref: str, name: str | None = None, description: str | None = None
+    ) -> dict[str, Any]:
+        """Update space details.
+
+        Args:
+            space_ref: Space key or numeric ID
+            name: New space name (optional)
+            description: New space description (optional)
+
+        Returns:
+            Updated space data
+
+        Raises:
+            ApiError: If the request fails
+        """
+        # Build update payload with only provided fields
+        payload: dict[str, Any] = {}
+
+        if name:
+            payload["name"] = name
+
+        if description:
+            payload["description"] = {"plain": {"value": description, "representation": "plain"}}
+
+        # API accepts both IDs and keys in the same endpoint
+        response = self.client.put(f"/spaces/{space_ref}", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def delete_space(self, space_ref: str) -> None:
+        """Delete a space by key or ID.
+
+        Args:
+            space_ref: Space key or numeric ID
+
+        Raises:
+            ApiError: If the request fails (except 404 which is handled gracefully)
+        """
+        # API accepts both IDs and keys in the same endpoint
+        response = self.client.delete(f"/spaces/{space_ref}")
+
+        # Accept both 204 (No Content - successful deletion) and 404 (already gone)
+        if response.status_code == 204:
+            return
+        elif response.status_code == 404:
+            # Space already deleted or doesn't exist - that's fine
+            return
+        else:
+            handle_api_error(response)
