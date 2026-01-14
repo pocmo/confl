@@ -1008,3 +1008,155 @@ class TestConfluencePageLinks:
         """
         result = storage_to_markdown(storage)
         assert "[Page Link]" in result
+
+
+class TestTaskLists:
+    """Test Confluence task list conversion."""
+
+    def test_single_incomplete_task(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:task-list>
+            <ac:task>
+                <ac:task-status>incomplete</ac:task-status>
+                <ac:task-body>Write documentation</ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        assert "- [ ] Write documentation" in result
+
+    def test_single_complete_task(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:task-list>
+            <ac:task>
+                <ac:task-status>complete</ac:task-status>
+                <ac:task-body>Review code</ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        assert "- [x] Review code" in result
+
+    def test_multiple_tasks_mixed_status(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:task-list>
+            <ac:task>
+                <ac:task-status>complete</ac:task-status>
+                <ac:task-body>Set up project</ac:task-body>
+            </ac:task>
+            <ac:task>
+                <ac:task-status>incomplete</ac:task-status>
+                <ac:task-body>Write tests</ac:task-body>
+            </ac:task>
+            <ac:task>
+                <ac:task-status>complete</ac:task-status>
+                <ac:task-body>Create README</ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        assert "- [x] Set up project" in result
+        assert "- [ ] Write tests" in result
+        assert "- [x] Create README" in result
+
+    def test_task_without_status(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: task without status element (should default to incomplete)
+        storage = """
+        <ac:task-list>
+            <ac:task>
+                <ac:task-body>Default task</ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        assert "- [ ] Default task" in result
+
+    def test_task_with_formatted_content(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:task-list>
+            <ac:task>
+                <ac:task-status>incomplete</ac:task-status>
+                <ac:task-body>Review <strong>bold text</strong> and <em>italics</em></ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        assert "- [ ] Review **bold text** and *italics*" in result
+
+    def test_task_in_paragraph_context(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>Project tasks:</p>
+        <ac:task-list>
+            <ac:task>
+                <ac:task-status>incomplete</ac:task-status>
+                <ac:task-body>First task</ac:task-body>
+            </ac:task>
+            <ac:task>
+                <ac:task-status>complete</ac:task-status>
+                <ac:task-body>Second task</ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        <p>More content</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "Project tasks:" in result
+        assert "- [ ] First task" in result
+        assert "- [x] Second task" in result
+        assert "More content" in result
+
+    def test_empty_task_list(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: empty task list
+        storage = """
+        <ac:task-list>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        # Should not crash, returns empty string or minimal content
+        assert isinstance(result, str)
+
+    def test_task_with_special_characters(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:task-list>
+            <ac:task>
+                <ac:task-status>incomplete</ac:task-status>
+                <ac:task-body>Fix bug in &lt;Component&gt; &amp; test</ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        assert "- [ ] Fix bug in <Component> & test" in result
+
+    def test_task_status_case_insensitive(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:task-list>
+            <ac:task>
+                <ac:task-status>COMPLETE</ac:task-status>
+                <ac:task-body>Uppercase status</ac:task-body>
+            </ac:task>
+            <ac:task>
+                <ac:task-status>InCoMpLeTe</ac:task-status>
+                <ac:task-body>Mixed case status</ac:task-body>
+            </ac:task>
+        </ac:task-list>
+        """
+        result = storage_to_markdown(storage)
+        assert "- [x] Uppercase status" in result
+        assert "- [ ] Mixed case status" in result

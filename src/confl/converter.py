@@ -394,6 +394,54 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
 
         return f"![{alt_text}]({url})"
 
+    def convert_ac_task_list(self, el: Tag, text: str, **options: Any) -> str:
+        """Convert Confluence task list to Markdown checkboxes.
+
+        Handles <ac:task-list> containers with <ac:task> items.
+        Each task has <ac:task-status> (complete/incomplete) and <ac:task-body>.
+
+        Example Confluence format:
+            <ac:task-list>
+                <ac:task>
+                    <ac:task-status>incomplete</ac:task-status>
+                    <ac:task-body>Task description</ac:task-body>
+                </ac:task>
+                <ac:task>
+                    <ac:task-status>complete</ac:task-status>
+                    <ac:task-body>Completed task</ac:task-body>
+                </ac:task>
+            </ac:task-list>
+
+        Result:
+            - [ ] Task description
+            - [x] Completed task
+        """
+        result = []
+
+        # Find all task elements
+        tasks = el.find_all("ac:task", recursive=False)
+        for task in tasks:
+            # Extract status (default to incomplete)
+            status_elem = task.find("ac:task-status")
+            is_complete = False
+            if status_elem is not None:
+                status_text = status_elem.get_text().strip().lower()
+                is_complete = status_text == "complete"
+
+            # Extract task body text
+            body_elem = task.find("ac:task-body")
+            if body_elem is not None:
+                # Process the body content recursively for any nested formatting
+                task_text = self.process_tag(body_elem, **options).strip()  # type: ignore[attr-defined]
+                if task_text:
+                    checkbox = "[x]" if is_complete else "[ ]"
+                    result.append(f"- {checkbox} {task_text}")
+
+        if result:
+            return "\n".join(result) + "\n\n"
+
+        return ""
+
 
 def storage_to_markdown(storage: str) -> str:
     """
@@ -413,6 +461,7 @@ def storage_to_markdown(storage: str) -> str:
         - Headings (h1-h6)
         - Bold and italic
         - Lists (ordered and unordered)
+        - Task lists → markdown checkboxes (- [ ] / - [x])
         - Code blocks (including code macro with syntax)
         - Inline code
         - Links (standard HTML and Confluence page links)
