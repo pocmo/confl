@@ -1,6 +1,7 @@
-"""HTTP client for Confluence Cloud REST API v2.
+"""HTTP client for Confluence Cloud REST API v2 and v1.
 
-Provides a configured httpx client for making API requests to Confluence.
+Provides configured httpx clients for making API requests to Confluence.
+Most functionality uses v2 API, but some features (like search) require v1.
 """
 
 import base64
@@ -57,13 +58,13 @@ def get_client() -> httpx.Client:
 
 
 def create_client(config: Config) -> httpx.Client:
-    """Create httpx client with the given configuration.
+    """Create httpx client with the given configuration for API v2.
 
     Args:
         config: Configuration with site, email, and token
 
     Returns:
-        Configured httpx.Client
+        Configured httpx.Client for v2 API
     """
     # Encode credentials for Basic auth
     credentials = f"{config.email}:{config.token}"
@@ -71,6 +72,49 @@ def create_client(config: Config) -> httpx.Client:
 
     return httpx.Client(
         base_url=f"https://{config.site}/wiki/api/v2",
+        headers={
+            "Authorization": f"Basic {encoded}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        timeout=30.0,
+    )
+
+
+def get_v1_client() -> httpx.Client:
+    """Get configured httpx client for Confluence API v1.
+
+    Returns:
+        Configured httpx.Client ready for v1 API calls
+
+    Raises:
+        ConfigError: If configuration is invalid or missing
+        SystemExit: Exits with code 2 if configuration cannot be loaded
+    """
+    try:
+        config = get_config()
+    except ConfigError as e:
+        console.print(f"[red]Error:[/red] {e}", style="red")
+        sys.exit(2)
+
+    return create_v1_client(config)
+
+
+def create_v1_client(config: Config) -> httpx.Client:
+    """Create httpx client with the given configuration for API v1.
+
+    Args:
+        config: Configuration with site, email, and token
+
+    Returns:
+        Configured httpx.Client for v1 API
+    """
+    # Encode credentials for Basic auth
+    credentials = f"{config.email}:{config.token}"
+    encoded = base64.b64encode(credentials.encode()).decode()
+
+    return httpx.Client(
+        base_url=f"https://{config.site}/wiki/rest/api",
         headers={
             "Authorization": f"Basic {encoded}",
             "Accept": "application/json",

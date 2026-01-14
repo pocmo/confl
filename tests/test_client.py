@@ -6,7 +6,15 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from confl.client import ApiError, ConfluenceClient, create_client, get_client, handle_api_error
+from confl.client import (
+    ApiError,
+    ConfluenceClient,
+    create_client,
+    create_v1_client,
+    get_client,
+    get_v1_client,
+    handle_api_error,
+)
 from confl.config import Config
 
 
@@ -44,6 +52,44 @@ def test_get_client_with_env_vars(monkeypatch):
     client = get_client()
 
     assert str(client.base_url) == "https://test.atlassian.net/wiki/api/v2/"
+    expected_creds = base64.b64encode(b"test@example.com:token123").decode()
+    assert client.headers["Authorization"] == f"Basic {expected_creds}"
+
+
+def test_create_v1_client():
+    """Test creating v1 client with config."""
+    config = Config(
+        site="mycompany.atlassian.net",
+        email="user@example.com",
+        token="test-token-123",
+    )
+
+    client = create_v1_client(config)
+
+    # Check base URL (httpx adds trailing slash)
+    assert str(client.base_url) == "https://mycompany.atlassian.net/wiki/rest/api/"
+
+    # Check auth header (same as v2)
+    expected_creds = base64.b64encode(b"user@example.com:test-token-123").decode()
+    assert client.headers["Authorization"] == f"Basic {expected_creds}"
+
+    # Check other headers
+    assert client.headers["Accept"] == "application/json"
+    assert client.headers["Content-Type"] == "application/json"
+
+    # Check timeout
+    assert client.timeout.read == 30.0
+
+
+def test_get_v1_client_with_env_vars(monkeypatch):
+    """Test get_v1_client loads config from env vars."""
+    monkeypatch.setenv("CONFL_SITE", "test.atlassian.net")
+    monkeypatch.setenv("CONFL_EMAIL", "test@example.com")
+    monkeypatch.setenv("CONFL_TOKEN", "token123")
+
+    client = get_v1_client()
+
+    assert str(client.base_url) == "https://test.atlassian.net/wiki/rest/api/"
     expected_creds = base64.b64encode(b"test@example.com:token123").decode()
     assert client.headers["Authorization"] == f"Basic {expected_creds}"
 
