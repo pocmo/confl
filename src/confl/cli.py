@@ -2,7 +2,7 @@
 
 import typer
 
-from confl.commands import attachment, auth, page, space
+from confl.commands import attachment, auth, label, page, space
 
 app = typer.Typer(
     name="confl",
@@ -15,6 +15,7 @@ app.add_typer(auth.app, name="auth")
 app.add_typer(page.app, name="page")
 app.add_typer(space.app, name="space")
 app.add_typer(attachment.app, name="attachment")
+app.add_typer(label.app, name="label")
 
 
 @app.callback()

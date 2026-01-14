@@ -660,3 +660,187 @@ class ConfluenceClient:
             return
         else:
             handle_api_error(response)
+
+    def list_page_labels(self, page_id: str, limit: int = 25) -> list[dict[str, Any]]:
+        """List labels on a page.
+
+        Args:
+            page_id: Page ID
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of label objects with id, name, prefix
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        response = self.client.get(f"/pages/{page_id}/labels", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def add_labels_to_page(self, page_id: str, labels: list[str]) -> list[dict[str, Any]]:
+        """Add labels to a page.
+
+        Note: Uses v1 API as v2 doesn't support label modification yet.
+
+        Args:
+            page_id: Page ID
+            labels: List of label names to add
+
+        Returns:
+            List of added label objects from v1 API response
+
+        Raises:
+            ApiError: If the request fails
+        """
+        # Build v1 API URL
+        # Client base is https://{site}/wiki/api/v2
+        # We need https://{site}/wiki/rest/api/content/{pageId}/label
+        base_url_str = str(self.client.base_url)
+        site_url = base_url_str.split("/wiki/")[0]
+        add_labels_url = f"{site_url}/wiki/rest/api/content/{page_id}/label"
+
+        # Build request body - array of {prefix, name} objects
+        # Most labels use "global" prefix
+        label_objects = [{"prefix": "global", "name": label} for label in labels]
+
+        response = self.client.post(add_labels_url, json=label_objects)
+
+        if response.status_code not in (200, 201):
+            handle_api_error(response)
+
+        # v1 API returns results array
+        result = cast(dict[str, Any], response.json())
+        results = result.get("results", [])
+        return cast(list[dict[str, Any]], results)
+
+    def remove_label_from_page(self, page_id: str, label_name: str) -> None:
+        """Remove a label from a page.
+
+        Note: Uses v1 API as v2 doesn't support label modification yet.
+
+        Args:
+            page_id: Page ID
+            label_name: Label name to remove
+
+        Raises:
+            ApiError: If the request fails (except 404 which is handled gracefully)
+        """
+        # Build v1 API URL
+        # Client base is https://{site}/wiki/api/v2
+        # We need https://{site}/wiki/rest/api/content/{pageId}/label?name={labelName}
+        base_url_str = str(self.client.base_url)
+        site_url = base_url_str.split("/wiki/")[0]
+        remove_label_url = f"{site_url}/wiki/rest/api/content/{page_id}/label"
+
+        response = self.client.delete(remove_label_url, params={"name": label_name})
+
+        # Accept both 204 (No Content - successful deletion) and 404 (label not found)
+        if response.status_code == 204:
+            return
+        elif response.status_code == 404:
+            # Label already removed or doesn't exist - that's fine
+            return
+        else:
+            handle_api_error(response)
+
+    def find_label_by_name(self, label_name: str) -> dict[str, Any] | None:
+        """Find a label by name.
+
+        Args:
+            label_name: Label name to search for
+
+        Returns:
+            Label object with id, name, prefix, or None if not found
+
+        Raises:
+            ApiError: If the request fails
+        """
+        # Search all labels - API doesn't support direct name lookup
+        # We'll fetch up to 250 labels (max limit) and search
+        response = self.client.get("/labels", params={"limit": "250"})
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        labels = cast(list[dict[str, Any]], result.get("results", []))
+
+        # Find matching label (case-insensitive)
+        label_name_lower = label_name.lower()
+        for label in labels:
+            if label.get("name", "").lower() == label_name_lower:
+                return label
+
+        return None
+
+    def list_pages_by_label(self, label_id: str, limit: int = 25) -> list[dict[str, Any]]:
+        """List pages with a specific label.
+
+        Args:
+            label_id: Label ID
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of page objects
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        response = self.client.get(f"/labels/{label_id}/pages", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def list_blogposts_by_label(self, label_id: str, limit: int = 25) -> list[dict[str, Any]]:
+        """List blog posts with a specific label.
+
+        Args:
+            label_id: Label ID
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of blog post objects
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        response = self.client.get(f"/labels/{label_id}/blogposts", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def list_attachments_by_label(self, label_id: str, limit: int = 25) -> list[dict[str, Any]]:
+        """List attachments with a specific label.
+
+        Args:
+            label_id: Label ID
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of attachment objects
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        response = self.client.get(f"/labels/{label_id}/attachments", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
