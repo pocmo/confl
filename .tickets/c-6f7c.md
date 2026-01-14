@@ -1,6 +1,6 @@
 ---
 id: c-6f7c
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T20:47:29Z
@@ -46,3 +46,7 @@ Research and document the Atlassian Document Format (ADF) used by Confluence in 
 - May be easier to work with than storage format for rendering
 - This will inform our rendering strategy decisions
 
+
+**2026-01-14T21:16:16Z**
+
+Completed: Created comprehensive ADF documentation in docs/architecture/atlassian-document-format.md. Includes overview, structure, node types, marks, examples, API usage, limitations, tools/resources, and recommendations for confl. Sourced from official Atlassian docs and web research.

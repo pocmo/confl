@@ -1,6 +1,6 @@
 ---
 id: c-4d9a
-status: open
+status: in_progress
 deps: []
 links: []
 created: 2026-01-14T20:44:08Z
@@ -29,3 +29,7 @@ Clean up README.md by removing the markdown section that is not related to the c
 ## Notes
 - Simple cleanup task
 
+
+**2026-01-14T21:13:58Z**
+
+Cannot identify unrelated section in README. All content appears relevant to confl CLI. Added question to .ralph/questions.md requesting clarification from user on which section should be removed.
