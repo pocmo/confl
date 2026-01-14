@@ -319,6 +319,34 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             # If no rich-text-body, just show the label
             return "[Excerpt]\n\n"
 
+        # Handle children macro (lists child pages)
+        if macro_name == "children":
+            # Extract parameters to provide context
+            params = {}
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                param_value = param.get_text().strip()
+                if param_name and param_value:
+                    params[param_name] = param_value
+
+            # Build descriptive placeholder based on parameters
+            if params:
+                # Common parameters: sort, depth, all, page, excerpt, etc.
+                param_parts = []
+                if "sort" in params:
+                    param_parts.append(f"sorted by {params['sort']}")
+                if "depth" in params:
+                    param_parts.append(f"depth {params['depth']}")
+                if "all" in params and params["all"].lower() == "true":
+                    param_parts.append("include all descendants")
+
+                if param_parts:
+                    param_desc = ", ".join(param_parts)
+                    return f"[Child pages: {param_desc}]\n\n"
+
+            # Default placeholder
+            return "[Child pages]\n\n"
+
         # For unknown macros, handle gracefully
         return self._handle_unknown_macro(el, macro_name, text, **options)
 
@@ -549,6 +577,7 @@ def storage_to_markdown(storage: str) -> str:
         - TOC macro → italic text placeholder
         - Jira macro → bracketed Jira issue keys or query
         - Excerpt macro → labeled content block
+        - Children macro → placeholder with parameters
         - Page links (ac:link with ri:page) → bracketed text
         - User mentions (ri:user) → @username format
 

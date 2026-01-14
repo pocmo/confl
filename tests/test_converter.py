@@ -910,6 +910,95 @@ class TestExcerptMacro:
         assert "More text follows." in result
 
 
+class TestChildrenMacro:
+    """Test children macro conversion."""
+
+    def test_children_macro_default(self) -> None:
+        """Test basic children macro with no parameters."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="children" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Child pages]" in result
+
+    def test_children_macro_with_all_parameter(self) -> None:
+        """Test children macro with all=true (include all descendants)."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="children" ac:schema-version="1">
+            <ac:parameter ac:name="all">true</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Child pages:" in result
+        assert "include all descendants" in result
+
+    def test_children_macro_with_sort_parameter(self) -> None:
+        """Test children macro with sort parameter."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="children" ac:schema-version="1">
+            <ac:parameter ac:name="sort">title</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Child pages:" in result
+        assert "sorted by title" in result
+
+    def test_children_macro_with_depth_parameter(self) -> None:
+        """Test children macro with depth parameter."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="children" ac:schema-version="1">
+            <ac:parameter ac:name="depth">2</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Child pages:" in result
+        assert "depth 2" in result
+
+    def test_children_macro_with_multiple_parameters(self) -> None:
+        """Test children macro with multiple parameters."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="children" ac:schema-version="1">
+            <ac:parameter ac:name="sort">title</ac:parameter>
+            <ac:parameter ac:name="depth">3</ac:parameter>
+            <ac:parameter ac:name="all">true</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Child pages:" in result
+        # Should contain all three parameter descriptions
+        assert "sorted by title" in result
+        assert "depth 3" in result
+        assert "include all descendants" in result
+
+    def test_children_macro_in_paragraph(self) -> None:
+        """Test children macro embedded in paragraph text."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>See the following pages:
+        <ac:structured-macro ac:name="children" ac:schema-version="1">
+            <ac:parameter ac:name="sort">creation</ac:parameter>
+        </ac:structured-macro>
+        for more information.</p>
+        """
+        result = storage_to_markdown(storage)
+        assert "See the following pages:" in result
+        assert "[Child pages:" in result
+        assert "sorted by creation" in result
+        assert "for more information." in result
+
+
 class TestUnknownMacros:
     """Test handling of unknown/unsupported Confluence macros."""
 
@@ -970,20 +1059,6 @@ class TestUnknownMacros:
         # Should not crash and should show some representation
         assert "[anchor:" in result
         assert "section-1" in result
-
-    def test_children_macro(self) -> None:
-        """Test children macro (lists child pages)."""
-        from confl.converter import storage_to_markdown
-
-        storage = """
-        <ac:structured-macro ac:name="children" ac:schema-version="1">
-            <ac:parameter ac:name="all">true</ac:parameter>
-        </ac:structured-macro>
-        """
-        result = storage_to_markdown(storage)
-        assert "[children:" in result
-        # Should show placeholder/parameters since we can't list actual children
-        assert "all:" in result or "[children]" in result
 
     def test_page_tree_macro(self) -> None:
         """Test page-tree macro (shows page hierarchy)."""
