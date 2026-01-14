@@ -20,6 +20,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Ralph
+.ralph/**/*.log
+
 # Virtual environments
 .venv/
 venv/
