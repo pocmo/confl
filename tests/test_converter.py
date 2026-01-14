@@ -536,6 +536,184 @@ class TestConfluencePanels:
         assert "> **NOTE**:" in result
         assert "Quick note" in result
 
+    def test_tip_panel(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="tip" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>Pro tip!</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "> **TIP**:" in result
+        assert "Pro tip!" in result
+
+
+class TestMarkdownPanelsToStorage:
+    """Test Markdown panel syntax conversion to Confluence storage format."""
+
+    def test_info_panel_from_markdown(self) -> None:
+        md = "> **INFO**: This is important information."
+        result = markdown_to_storage(md)
+        assert '<ac:structured-macro ac:name="info"' in result
+        assert "<ac:rich-text-body>" in result
+        assert "important information" in result
+
+    def test_warning_panel_from_markdown(self) -> None:
+        md = "> **WARNING**: Be careful!"
+        result = markdown_to_storage(md)
+        assert '<ac:structured-macro ac:name="warning"' in result
+        assert "Be careful!" in result
+
+    def test_note_panel_from_markdown(self) -> None:
+        md = "> **NOTE**: Quick note here."
+        result = markdown_to_storage(md)
+        assert '<ac:structured-macro ac:name="note"' in result
+        assert "Quick note" in result
+
+    def test_tip_panel_from_markdown(self) -> None:
+        md = "> **TIP**: Pro tip for you."
+        result = markdown_to_storage(md)
+        assert '<ac:structured-macro ac:name="tip"' in result
+        assert "Pro tip" in result
+
+    def test_regular_blockquote_unchanged(self) -> None:
+        md = "> This is just a regular quote"
+        result = markdown_to_storage(md)
+        assert "<blockquote>" in result
+        assert "<ac:structured-macro" not in result
+
+
+class TestStatusMacro:
+    """Test Confluence status macro conversion."""
+
+    def test_status_green(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="status" ac:schema-version="1">
+            <ac:parameter ac:name="title">Complete</ac:parameter>
+            <ac:parameter ac:name="colour">Green</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "✅" in result
+        assert "**Complete**" in result
+
+    def test_status_yellow(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="status" ac:schema-version="1">
+            <ac:parameter ac:name="title">In Progress</ac:parameter>
+            <ac:parameter ac:name="colour">Yellow</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "⚠️" in result
+        assert "**In Progress**" in result
+
+    def test_status_red(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="status" ac:schema-version="1">
+            <ac:parameter ac:name="title">Blocked</ac:parameter>
+            <ac:parameter ac:name="colour">Red</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "❌" in result
+        assert "**Blocked**" in result
+
+    def test_status_blue(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="status" ac:schema-version="1">
+            <ac:parameter ac:name="title">Info</ac:parameter>
+            <ac:parameter ac:name="colour">Blue</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "ℹ️" in result
+        assert "**Info**" in result
+
+    def test_status_grey(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="status" ac:schema-version="1">
+            <ac:parameter ac:name="title">Draft</ac:parameter>
+            <ac:parameter ac:name="colour">Grey</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "⚪" in result
+        assert "**Draft**" in result
+
+    def test_status_unknown_color(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="status" ac:schema-version="1">
+            <ac:parameter ac:name="title">Custom</ac:parameter>
+            <ac:parameter ac:name="colour">Purple</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "▪️" in result  # Default emoji
+        assert "**Custom**" in result
+
+
+class TestExpandMacro:
+    """Test Confluence expand (collapsible) macro conversion."""
+
+    def test_expand_with_title(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="expand" ac:schema-version="1">
+            <ac:parameter ac:name="title">Click to expand</ac:parameter>
+            <ac:rich-text-body>
+                <p>Hidden content here.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "<details>" in result
+        assert "<summary>Click to expand</summary>" in result
+        assert "Hidden content" in result
+        assert "</details>" in result
+
+    def test_expand_without_title(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="expand" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>Hidden content.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "<details>" in result
+        assert "<summary>Details</summary>" in result  # Default title
+        assert "Hidden content" in result
+
+
+class TestTOCMacro:
+    """Test Confluence table of contents macro conversion."""
+
+    def test_toc_macro(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<ac:structured-macro ac:name="toc" ac:schema-version="1"></ac:structured-macro>'
+        result = storage_to_markdown(storage)
+        assert "_Table of Contents_" in result
+
 
 class TestRoundTripConversion:
     """Test Markdown -> Storage -> Markdown round-trip conversions."""

@@ -46,13 +46,24 @@ pipx install git+https://github.com/pocmo/confl.git
 
 ### Confluence-Specific Features
 
-⚠️ **Partial Support:**
-- **Info/Warning/Note panels** — Converted to/from block quotes with labels when reading
+✅ **Full Support:**
 - **Code macro** — Automatically used for code blocks with syntax highlighting
+- **Info/Warning/Note/Tip panels** — Use special blockquote syntax:
+  ```markdown
+  > **INFO**: This is an info panel
+  > **WARNING**: This is a warning
+  > **NOTE**: This is a note
+  > **TIP**: This is a helpful tip
+  ```
 
-❌ **Not Supported:**
-- **Status boxes** — No Markdown equivalent
-- **Collapsible panels** — No Markdown equivalent
+⚠️ **Partial Support:**
+- **Status indicators** — Converted to emoji badges when reading (✅ ⚠️ ❌ ℹ️ ⚪)
+- **Expand macro** — Converted to HTML `<details>/<summary>` when reading
+- **TOC macro** — Converted to italic text placeholder when reading
+
+❌ **Not Supported (Markdown Creation):**
+- **Status boxes** — Can read, but can't create from Markdown
+- **Collapsible panels** — Can read, but can't create from Markdown
 - **Advanced macros** — Jira issues, page trees, etc.
 - **Page links** — Use direct URLs instead
 

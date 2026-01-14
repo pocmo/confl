@@ -99,8 +99,35 @@ class ConfluenceStorageRenderer(mistune.HTMLRenderer):
         return f"<li>{text}</li>\n"
 
     def block_quote(self, text: str) -> str:
-        """Render block quote."""
-        return f"<blockquote><p>{text.strip()}</p></blockquote>\n"
+        """
+        Render block quote.
+
+        Supports special syntax for Confluence panels:
+        > **INFO**: Content → info panel
+        > **WARNING**: Content → warning panel
+        > **NOTE**: Content → note panel
+        > **TIP**: Content → tip panel
+        """
+        stripped = text.strip()
+
+        # Strip surrounding <p></p> tags if present (added by paragraph renderer)
+        if stripped.startswith("<p>") and stripped.endswith("</p>"):
+            stripped = stripped[3:-4].strip()
+
+        # Check for panel syntax: **LABEL**: content
+        for panel_type in ["INFO", "WARNING", "NOTE", "TIP"]:
+            prefix = f"<strong>{panel_type}</strong>:"
+            if stripped.startswith(prefix):
+                content = stripped[len(prefix) :].strip()
+                macro_name = panel_type.lower()
+                return (
+                    f'<ac:structured-macro ac:name="{macro_name}" ac:schema-version="1">'
+                    f"<ac:rich-text-body><p>{content}</p></ac:rich-text-body>"
+                    f"</ac:structured-macro>\n"
+                )
+
+        # Regular blockquote - restore paragraph tag if we removed it
+        return f"<blockquote><p>{stripped}</p></blockquote>\n"
 
     def thematic_break(self) -> str:
         """Render horizontal rule."""
@@ -153,6 +180,7 @@ def markdown_to_storage(markdown: str) -> str:
         - Images (external URLs and attachments)
         - Tables
         - Block quotes
+        - Confluence panels (info/warning/note/tip) via special blockquote syntax
         - Horizontal rules
 
     Example:
@@ -203,6 +231,52 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
                 # Convert the content inside recursively
                 inner_md = self.process_tag(rich_body, **options)  # type: ignore[attr-defined]
                 return f"> **{macro_name.upper()}**: {inner_md.strip()}\n\n"
+
+        # Handle status macro
+        if macro_name == "status":
+            # Extract title and color parameters
+            title = ""
+            color = ""
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                if param_name == "title":
+                    title = param.get_text().strip()
+                elif param_name == "colour":
+                    color = param.get_text().strip()
+
+            # Convert to badge-like Markdown (use bold with emoji indicators)
+            color_emoji = {
+                "Green": "✅",
+                "Yellow": "⚠️",
+                "Red": "❌",
+                "Blue": "ℹ️",
+                "Grey": "⚪",
+            }.get(color, "▪️")
+
+            return f"{color_emoji} **{title}** "
+
+        # Handle expand macro (collapsible content)
+        if macro_name == "expand":
+            # Extract title parameter
+            title = "Details"
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                if param_name == "title":
+                    title = param.get_text().strip()
+                    break
+
+            # Extract rich-text-body content
+            rich_body = el.find("ac:rich-text-body")
+            if rich_body is not None:
+                inner_md = self.process_tag(rich_body, **options)  # type: ignore[attr-defined]
+                # Convert to details/summary HTML (supported in many Markdown renderers)
+                return (
+                    f"<details>\n<summary>{title}</summary>\n\n{inner_md.strip()}\n</details>\n\n"
+                )
+
+        # Handle table of contents macro
+        if macro_name == "toc":
+            return "_Table of Contents_\n\n"
 
         # For unknown macros, try to extract text or return nothing
         return text.strip() + "\n\n" if text.strip() else ""
@@ -255,9 +329,12 @@ def storage_to_markdown(storage: str) -> str:
         - Tables
         - Block quotes
         - Horizontal rules
+        - Info/warning/note/tip panels → block quotes with label
+        - Status macros → emoji badges
+        - Expand macros → HTML details/summary
+        - TOC macro → italic text placeholder
 
     Partial support:
-        - Info/warning/note panels → block quotes with label
         - Unknown macros → text content or omitted
 
     Limitations:
