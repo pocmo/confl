@@ -1,6 +1,5 @@
 """Tests for Markdown to Confluence storage format conversion."""
 
-
 from confl.converter import markdown_to_storage
 
 
@@ -310,3 +309,263 @@ class TestLineBreaks:
         # Should have br tag or be on separate lines
         assert "Line 1" in result
         assert "Line 2" in result
+
+
+class TestStorageToMarkdown:
+    """Test Confluence storage format to Markdown conversion."""
+
+    def test_basic_heading(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<h1>Hello World</h1>"
+        result = storage_to_markdown(storage)
+        assert result.strip() == "# Hello World"
+
+    def test_multiple_headings(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<h1>Title</h1><h2>Subtitle</h2><h3>Section</h3>"
+        result = storage_to_markdown(storage)
+        assert "# Title" in result
+        assert "## Subtitle" in result
+        assert "### Section" in result
+
+    def test_paragraph(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<p>This is a paragraph.</p>"
+        result = storage_to_markdown(storage)
+        assert "This is a paragraph." in result
+
+    def test_bold_and_italic(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<p>This is <strong>bold</strong> and <em>italic</em>.</p>"
+        result = storage_to_markdown(storage)
+        assert "**bold**" in result
+        assert "*italic*" in result
+
+    def test_inline_code(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<p>Use <code>code</code> here</p>"
+        result = storage_to_markdown(storage)
+        assert "`code`" in result
+
+    def test_unordered_list(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>"
+        result = storage_to_markdown(storage)
+        assert "* Item 1" in result or "- Item 1" in result
+        assert "* Item 2" in result or "- Item 2" in result
+        assert "* Item 3" in result or "- Item 3" in result
+
+    def test_ordered_list(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<ol><li>First</li><li>Second</li><li>Third</li></ol>"
+        result = storage_to_markdown(storage)
+        assert "1. First" in result or "1) First" in result
+        assert "2. Second" in result or "2) Second" in result
+        assert "3. Third" in result or "3) Third" in result
+
+    def test_link(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<p>Visit <a href="https://example.com">example</a></p>'
+        result = storage_to_markdown(storage)
+        assert "[example](https://example.com)" in result
+
+    def test_blockquote(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<blockquote><p>This is quoted text.</p></blockquote>"
+        result = storage_to_markdown(storage)
+        assert "> This is quoted text." in result
+
+    def test_horizontal_rule(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = "<hr />"
+        result = storage_to_markdown(storage)
+        assert "---" in result or "* * *" in result
+
+    def test_table(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Age</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Alice</td><td>30</td></tr>
+                <tr><td>Bob</td><td>25</td></tr>
+            </tbody>
+        </table>
+        """
+        result = storage_to_markdown(storage)
+        assert "Name" in result
+        assert "Age" in result
+        assert "Alice" in result
+        assert "30" in result
+        assert "Bob" in result
+        assert "25" in result
+        assert "|" in result  # Tables use pipes
+
+
+class TestConfluenceCodeMacro:
+    """Test Confluence code macro conversion."""
+
+    def test_code_macro_with_language(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="code" ac:schema-version="1">
+            <ac:parameter ac:name="language">python</ac:parameter>
+            <ac:plain-text-body><![CDATA[print('hello')]]></ac:plain-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "```python" in result
+        assert "print('hello')" in result
+        assert "```" in result
+
+    def test_code_macro_without_language(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="code" ac:schema-version="1">
+            <ac:plain-text-body><![CDATA[some code]]></ac:plain-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "```" in result
+        assert "some code" in result
+
+    def test_code_macro_multiline(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="code" ac:schema-version="1">
+            <ac:parameter ac:name="language">javascript</ac:parameter>
+            <ac:plain-text-body><![CDATA[function hello() {
+    console.log('Hello');
+}]]></ac:plain-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "```javascript" in result
+        assert "function hello()" in result
+        assert "console.log('Hello');" in result
+
+
+class TestConfluenceImages:
+    """Test Confluence image tag conversion."""
+
+    def test_external_image_url(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<ac:image><ri:url ri:value="https://example.com/image.png" /></ac:image>'
+        result = storage_to_markdown(storage)
+        assert "![](https://example.com/image.png)" in result
+
+    def test_image_with_caption(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:image>
+            <ri:url ri:value="https://example.com/logo.png" />
+            <ac:caption><p>Company Logo</p></ac:caption>
+        </ac:image>
+        """
+        result = storage_to_markdown(storage)
+        assert "![Company Logo](https://example.com/logo.png)" in result
+
+    def test_attached_image(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<ac:image><ri:attachment ri:filename="screenshot.png" /></ac:image>'
+        result = storage_to_markdown(storage)
+        assert "![](screenshot.png)" in result
+
+
+class TestConfluencePanels:
+    """Test Confluence panel macro conversion."""
+
+    def test_info_panel(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="info" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>This is important information.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "> **INFO**:" in result
+        assert "important information" in result
+
+    def test_warning_panel(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="warning" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>Be careful!</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "> **WARNING**:" in result
+        assert "Be careful!" in result
+
+    def test_note_panel(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="note" ac:schema-version="1">
+            <ac:rich-text-body>
+                <p>Quick note here.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "> **NOTE**:" in result
+        assert "Quick note" in result
+
+
+class TestRoundTripConversion:
+    """Test Markdown -> Storage -> Markdown round-trip conversions."""
+
+    def test_basic_roundtrip(self) -> None:
+        from confl.converter import markdown_to_storage, storage_to_markdown
+
+        md = "# Hello\n\nThis is **bold** text."
+        storage = markdown_to_storage(md)
+        result = storage_to_markdown(storage)
+        # Check key content is preserved
+        assert "# Hello" in result or "Hello" in result
+        assert "**bold**" in result
+
+    def test_list_roundtrip(self) -> None:
+        from confl.converter import markdown_to_storage, storage_to_markdown
+
+        md = "- Item 1\n- Item 2\n- Item 3"
+        storage = markdown_to_storage(md)
+        result = storage_to_markdown(storage)
+        # Lists should be preserved (though format may differ slightly)
+        assert "Item 1" in result
+        assert "Item 2" in result
+        assert "Item 3" in result
+
+    def test_code_block_roundtrip(self) -> None:
+        from confl.converter import markdown_to_storage, storage_to_markdown
+
+        md = "```python\nprint('test')\n```"
+        storage = markdown_to_storage(md)
+        result = storage_to_markdown(storage)
+        assert "```python" in result or "```" in result
+        assert "print('test')" in result

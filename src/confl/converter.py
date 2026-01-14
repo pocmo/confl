@@ -4,6 +4,8 @@ import html
 from typing import Any
 
 import mistune
+from bs4 import Tag
+from markdownify import MarkdownConverter
 
 
 class ConfluenceStorageRenderer(mistune.HTMLRenderer):
@@ -166,3 +168,114 @@ def markdown_to_storage(markdown: str) -> str:
     # With a renderer, mistune always returns a string
     assert isinstance(result, str)
     return result.rstrip() + "\n"
+
+
+class ConfluenceMarkdownConverter(MarkdownConverter):
+    """Custom markdownify converter that handles Confluence storage format tags."""
+
+    def convert_ac_structured_macro(self, el: Tag, text: str, **options: Any) -> str:
+        """Convert Confluence structured macro to Markdown."""
+        macro_name_attr = el.get("ac:name", "")
+        # el.get() can return a list in some edge cases, ensure it's a string
+        macro_name = macro_name_attr if isinstance(macro_name_attr, str) else ""
+
+        # Handle code macro
+        if macro_name == "code":
+            # Extract language parameter
+            language = ""
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                if param_name == "language":
+                    language = param.get_text().strip()
+                    break
+
+            # Extract code content from plain-text-body
+            code_body = el.find("ac:plain-text-body")
+            if code_body is not None:
+                code_text = code_body.get_text().strip()
+                return f"```{language}\n{code_text}\n```\n\n"
+
+        # Handle info/warning/note panels
+        if macro_name in ("info", "warning", "note", "tip"):
+            # Extract rich-text-body content
+            rich_body = el.find("ac:rich-text-body")
+            if rich_body is not None:
+                # Convert the content inside recursively
+                inner_md = self.process_tag(rich_body, **options)  # type: ignore[attr-defined]
+                return f"> **{macro_name.upper()}**: {inner_md.strip()}\n\n"
+
+        # For unknown macros, try to extract text or return nothing
+        return text.strip() + "\n\n" if text.strip() else ""
+
+    def convert_ac_image(self, el: Tag, text: str, **options: Any) -> str:
+        """Convert Confluence image tag to Markdown."""
+        # Try to find ri:url (external image)
+        url_elem = el.find("ri:url")
+        if url_elem is not None:
+            url = url_elem.get("ri:value", "")
+        else:
+            # Try to find ri:attachment (attached image)
+            attachment = el.find("ri:attachment")
+            if attachment is not None:
+                url = attachment.get("ri:filename", "")
+            else:
+                return ""
+
+        # Try to find caption
+        caption_elem = el.find("ac:caption")
+        alt_text = ""
+        if caption_elem is not None:
+            alt_text = caption_elem.get_text().strip()
+
+        return f"![{alt_text}]({url})"
+
+
+def storage_to_markdown(storage: str) -> str:
+    """
+    Convert Confluence storage format to Markdown.
+
+    This is a best-effort conversion. Some Confluence-specific features
+    may not have direct Markdown equivalents and will be converted to
+    the closest approximation or omitted.
+
+    Args:
+        storage: Confluence storage format XHTML string
+
+    Returns:
+        Markdown text
+
+    Supported conversions:
+        - Headings (h1-h6)
+        - Bold and italic
+        - Lists (ordered and unordered)
+        - Code blocks (including code macro with syntax)
+        - Inline code
+        - Links
+        - Images (both external URLs and attachments)
+        - Tables
+        - Block quotes
+        - Horizontal rules
+
+    Partial support:
+        - Info/warning/note panels → block quotes with label
+        - Unknown macros → text content or omitted
+
+    Limitations:
+        - Complex Confluence macros may not convert cleanly
+        - Nested macros may lose formatting
+        - Page links require special handling
+
+    Example:
+        >>> storage = "<h1>Hello</h1><p>This is <strong>bold</strong>.</p>"
+        >>> md = storage_to_markdown(storage)
+        >>> print(md)
+        # Hello
+
+        This is **bold**.
+    """
+    converter = ConfluenceMarkdownConverter(
+        heading_style="ATX",  # Use # for headings
+    )
+
+    result = converter.convert(storage)
+    return result.strip() + "\n"

@@ -1,6 +1,6 @@
 ---
 id: c-2ee0
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T16:03:37Z
@@ -23,3 +23,9 @@ Tasks:
 - Add tests for common storage format patterns
 - Document conversion limitations
 
+
+## Notes
+
+**2026-01-14T16:32:58Z**
+
+Completed: Added storage_to_markdown() function with support for all basic HTML elements and Confluence-specific tags (code macro, images, info/warning/note panels). Includes 23 comprehensive tests. All 161 tests pass with 96.12% coverage.
