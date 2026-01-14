@@ -86,9 +86,25 @@ cat notes.md | confl page create --space DOCS --title "Notes"
 confl page update PAGE_ID --body "## Updated\n\nNew content"
 ```
 
-**Get page content as Markdown:**
+**Get page content in different formats:**
 ```bash
-confl page get PAGE_ID > page.md
+# Default: Rich terminal rendering with formatting
+confl page get PAGE_ID
+
+# Markdown format (for editing/saving)
+confl page get PAGE_ID --markdown > page.md
+
+# Plain text (no formatting)
+confl page get PAGE_ID --plain
+
+# Raw storage format (Confluence XHTML)
+confl page get PAGE_ID --raw
+
+# JSON (full API response)
+confl page get PAGE_ID --json
+
+# Body only (suppress metadata header)
+confl page get PAGE_ID --body-only
 ```
 
 ### Bypassing Conversion (Raw Mode)

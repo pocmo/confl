@@ -94,6 +94,55 @@ def _get_page_content(page: dict[str, Any], format_type: str = "storage") -> str
     return str(value)
 
 
+def _strip_markdown(markdown_text: str) -> str:
+    """Strip markdown formatting to produce plain text.
+
+    Args:
+        markdown_text: Markdown formatted text
+
+    Returns:
+        Plain text with markdown syntax removed
+    """
+    text = markdown_text
+
+    # Remove code blocks (```...```)
+    text = re.sub(r"```[\s\S]*?```", "", text)
+
+    # Remove inline code (`...`)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+
+    # Remove bold/italic (**text**, *text*, __text__, _text_)
+    text = re.sub(r"\*\*([^\*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    text = re.sub(r"\*([^\*]+)\*", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
+
+    # Remove links [text](url) -> text
+    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+
+    # Remove images ![alt](url)
+    text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)
+
+    # Remove headers (#, ##, ###, etc.)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+
+    # Remove blockquotes (>)
+    text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)
+
+    # Remove horizontal rules (---, ***, ___)
+    text = re.sub(r"^(\*{3,}|-{3,}|_{3,})$", "", text, flags=re.MULTILINE)
+
+    # Remove list markers (-, *, +, 1.)
+    text = re.sub(r"^[\s]*[-\*\+]\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[\s]*\d+\.\s+", "", text, flags=re.MULTILINE)
+
+    # Clean up extra whitespace
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = text.strip()
+
+    return text
+
+
 @app.command("get")
 def get_page(
     ref: str = typer.Argument(..., help="Page ID or URL"),
@@ -103,6 +152,7 @@ def get_page(
     markdown: bool = typer.Option(
         False, "--markdown", help="Output raw markdown (converted from storage format)"
     ),
+    plain: bool = typer.Option(False, "--plain", help="Output plain text (stripped of formatting)"),
 ) -> None:
     """Fetch and display a page.
 
@@ -111,12 +161,23 @@ def get_page(
         confl page get "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678/Title"
         confl page get 12345678 --json
         confl page get 12345678 --raw
+        confl page get 12345678 --markdown
+        confl page get 12345678 --plain
         confl page get 12345678 --body-only
     """
     try:
         page_id = _extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(2)
+
+    # Validate mutually exclusive format flags
+    format_flags = [json_output, raw, markdown, plain]
+    if sum(format_flags) > 1:
+        err_console.print(
+            "[red]Error:[/red] Only one output format flag can be used at a time "
+            "(--json, --raw, --markdown, --plain)"
+        )
         sys.exit(2)
 
     # Get the page
@@ -143,6 +204,14 @@ def get_page(
         if not body_only:
             console.print(_format_page_metadata(page))
         print(markdown_content)
+    elif plain:
+        # Output plain text (converted from storage, stripped of markdown)
+        content = _get_page_content(page, "storage")
+        markdown_content = storage_to_markdown(content)
+        plain_content = _strip_markdown(markdown_content)
+        if not body_only:
+            console.print(_format_page_metadata(page))
+        print(plain_content)
     else:
         # Default: Rich terminal output with Markdown rendering
         if not body_only:

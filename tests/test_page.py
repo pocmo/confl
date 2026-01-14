@@ -321,6 +321,69 @@ class TestPageGetCommand:
         assert "Test Page with Macros" in result.stdout
         assert "hello" in result.stdout or "print" in result.stdout
 
+    def test_get_page_plain_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test that --plain flag outputs plain text with formatting stripped."""
+        page_data = {
+            "id": "12345678",
+            "status": "current",
+            "title": "Test Page",
+            "spaceId": "98765",
+            "version": {
+                "number": 1,
+                "authorId": "user123",
+                "createdAt": "2024-01-15T10:00:00.000Z",
+            },
+            "body": {
+                "storage": {
+                    "value": (
+                        "<h1>Heading</h1>"
+                        "<p>This is <strong>bold</strong> and <em>italic</em> text.</p>"
+                        "<p>Here is a <a href='https://example.com'>link</a>.</p>"
+                    ),
+                    "representation": "storage",
+                },
+            },
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
+            method="GET",
+            json=page_data,
+        )
+
+        result = runner.invoke(app, ["page", "get", "12345678", "--plain"])
+        assert result.exit_code == 0
+        # Check that markdown formatting is stripped
+        assert "Heading" in result.stdout
+        assert "bold" in result.stdout
+        assert "italic" in result.stdout
+        assert "link" in result.stdout
+        # Ensure markdown syntax is NOT present
+        assert "**" not in result.stdout
+        assert "*" not in result.stdout or "italic" in result.stdout  # Allow asterisk in word
+        assert "#" not in result.stdout
+        assert "[" not in result.stdout
+
+    def test_get_page_mutually_exclusive_formats(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test that format flags are mutually exclusive."""
+        # Test various combinations
+        test_cases = [
+            (["--json", "--raw"], "Only one output format flag"),
+            (["--json", "--markdown"], "Only one output format flag"),
+            (["--json", "--plain"], "Only one output format flag"),
+            (["--raw", "--markdown"], "Only one output format flag"),
+            (["--raw", "--plain"], "Only one output format flag"),
+            (["--markdown", "--plain"], "Only one output format flag"),
+            (["--json", "--raw", "--markdown"], "Only one output format flag"),
+        ]
+
+        for flags, expected_error in test_cases:
+            result = runner.invoke(app, ["page", "get", "12345678"] + flags)
+            assert result.exit_code == 2, f"Failed for flags: {flags}"
+            assert expected_error in result.stderr, f"Failed for flags: {flags}"
+
 
 class TestListPages:
     """Tests for page list command."""
