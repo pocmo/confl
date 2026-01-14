@@ -4,6 +4,7 @@
 
 | Entity | Description |
 |--------|-------------|
+| `auth` | Manage authentication credentials |
 | `page` | Read, create, update Confluence pages |
 | `space` | List and inspect spaces |
 | `search` | Find content by query |

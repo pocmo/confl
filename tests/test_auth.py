@@ -193,3 +193,165 @@ def test_get_auth_source_credentials(clean_env, temp_credentials_file):
     )
 
     assert _get_auth_source() == "credentials"
+
+
+def test_auth_login_success(clean_env, temp_credentials_file):
+    """Test auth login command with valid input."""
+    result = runner.invoke(
+        app,
+        [
+            "auth",
+            "login",
+            "--token",
+            "--site",
+            "mycompany.atlassian.net",
+            "--email",
+            "user@example.com",
+        ],
+        input="my-secret-token\n",
+    )
+    assert result.exit_code == 0
+    assert "Credentials saved" in result.stdout
+    assert "user@example.com" in result.stdout
+    assert "mycompany.atlassian.net" in result.stdout
+
+    # Verify credentials were written
+    assert temp_credentials_file.exists()
+    content = temp_credentials_file.read_text()
+    assert "mycompany.atlassian.net" in content
+    assert "user@example.com" in content
+    assert "my-secret-token" in content
+
+
+def test_auth_login_missing_token_flag(clean_env, temp_credentials_file):
+    """Test auth login without --token flag."""
+    result = runner.invoke(
+        app,
+        ["auth", "login", "--site", "mycompany.atlassian.net", "--email", "user@example.com"],
+        input="my-secret-token\n",
+    )
+    assert result.exit_code == 2
+    assert "The --token flag is required" in result.stdout
+
+
+def test_auth_login_no_stdin(clean_env, temp_credentials_file):
+    """Test auth login with no token on stdin."""
+    result = runner.invoke(
+        app,
+        [
+            "auth",
+            "login",
+            "--token",
+            "--site",
+            "mycompany.atlassian.net",
+            "--email",
+            "user@example.com",
+        ],
+        input="",
+    )
+    assert result.exit_code == 2
+    assert "No token provided on stdin" in result.stdout
+
+
+def test_auth_login_invalid_site_with_protocol(clean_env, temp_credentials_file):
+    """Test auth login with site containing protocol."""
+    result = runner.invoke(
+        app,
+        [
+            "auth",
+            "login",
+            "--token",
+            "--site",
+            "https://mycompany.atlassian.net",
+            "--email",
+            "user@example.com",
+        ],
+        input="my-secret-token\n",
+    )
+    assert result.exit_code == 2
+    assert "Invalid site format" in result.stdout
+
+
+def test_auth_login_invalid_site_with_path(clean_env, temp_credentials_file):
+    """Test auth login with site containing path."""
+    result = runner.invoke(
+        app,
+        [
+            "auth",
+            "login",
+            "--token",
+            "--site",
+            "mycompany.atlassian.net/wiki",
+            "--email",
+            "user@example.com",
+        ],
+        input="my-secret-token\n",
+    )
+    assert result.exit_code == 2
+    assert "Invalid site format" in result.stdout
+
+
+def test_auth_login_whitespace_in_token(clean_env, temp_credentials_file):
+    """Test auth login strips whitespace from token."""
+    result = runner.invoke(
+        app,
+        [
+            "auth",
+            "login",
+            "--token",
+            "--site",
+            "mycompany.atlassian.net",
+            "--email",
+            "user@example.com",
+        ],
+        input="  my-secret-token  \n",
+    )
+    assert result.exit_code == 0
+
+    # Verify token was stripped
+    content = temp_credentials_file.read_text()
+    assert 'token = "my-secret-token"' in content
+
+
+def test_auth_logout_with_credentials(clean_env, temp_credentials_file):
+    """Test auth logout when credentials exist."""
+    temp_credentials_file.write_text(
+        'site = "mycompany.atlassian.net"\nemail = "test@example.com"\ntoken = "test-token"\n'
+    )
+
+    result = runner.invoke(app, ["auth", "logout"])
+    assert result.exit_code == 0
+    assert "Logged out" in result.stdout
+    assert not temp_credentials_file.exists()
+
+
+def test_auth_logout_without_credentials(clean_env, temp_credentials_file):
+    """Test auth logout when no credentials exist."""
+    result = runner.invoke(app, ["auth", "logout"])
+    assert result.exit_code == 0
+    assert "Logged out" in result.stdout
+
+
+def test_auth_login_logout_roundtrip(clean_env, temp_credentials_file):
+    """Test full login/logout workflow."""
+    # Login
+    result = runner.invoke(
+        app,
+        ["auth", "login", "--token", "--site", "test.atlassian.net", "--email", "test@example.com"],
+        input="test-token\n",
+    )
+    assert result.exit_code == 0
+
+    # Verify authenticated
+    result = runner.invoke(app, ["auth", "status"])
+    assert result.exit_code == 0
+    assert "Authenticated" in result.stdout
+
+    # Logout
+    result = runner.invoke(app, ["auth", "logout"])
+    assert result.exit_code == 0
+
+    # Verify not authenticated
+    result = runner.invoke(app, ["auth", "status"])
+    assert result.exit_code == 1
+    assert "Not authenticated" in result.stdout
