@@ -155,3 +155,28 @@ class ConfluenceClient:
             handle_api_error(response)
 
         return cast(dict[str, Any], response.json())
+
+    def list_pages(self, space_key: str | None = None, limit: int = 25) -> list[dict[str, Any]]:
+        """List pages, optionally filtered by space.
+
+        Args:
+            space_key: Optional space key to filter by
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of page objects with basic metadata (id, title, spaceId)
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        if space_key:
+            params["space-key"] = space_key
+
+        response = self.client.get("/pages", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))

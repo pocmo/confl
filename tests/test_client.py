@@ -320,3 +320,187 @@ def test_confluence_client_get_page_unauthorized(httpx_mock: HTTPXMock):
 
     assert exc_info.value.status_code == 401
     assert "Authentication failed" in str(exc_info.value)
+
+
+def test_confluence_client_list_pages(httpx_mock: HTTPXMock):
+    """Test listing pages without space filter."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock successful response
+    response_data = {
+        "results": [
+            {
+                "id": "123",
+                "status": "current",
+                "title": "First Page",
+                "spaceId": "111",
+            },
+            {
+                "id": "456",
+                "status": "current",
+                "title": "Second Page",
+                "spaceId": "222",
+            },
+        ],
+        "_links": {},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages?limit=25",
+        json=response_data,
+    )
+
+    result = confluence.list_pages()
+
+    assert len(result) == 2
+    assert result[0]["id"] == "123"
+    assert result[0]["title"] == "First Page"
+    assert result[1]["id"] == "456"
+    assert result[1]["title"] == "Second Page"
+
+
+def test_confluence_client_list_pages_with_space_filter(httpx_mock: HTTPXMock):
+    """Test listing pages with space filter."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    response_data = {
+        "results": [
+            {
+                "id": "789",
+                "status": "current",
+                "title": "Dev Page",
+                "spaceId": "333",
+            },
+        ],
+        "_links": {},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages?limit=25&space-key=DEV",
+        json=response_data,
+    )
+
+    result = confluence.list_pages(space_key="DEV")
+
+    assert len(result) == 1
+    assert result[0]["id"] == "789"
+    assert result[0]["title"] == "Dev Page"
+
+
+def test_confluence_client_list_pages_with_limit(httpx_mock: HTTPXMock):
+    """Test listing pages with custom limit."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    response_data = {
+        "results": [
+            {"id": "1", "status": "current", "title": "Page 1", "spaceId": "111"},
+            {"id": "2", "status": "current", "title": "Page 2", "spaceId": "111"},
+            {"id": "3", "status": "current", "title": "Page 3", "spaceId": "111"},
+        ],
+        "_links": {},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages?limit=3",
+        json=response_data,
+    )
+
+    result = confluence.list_pages(limit=3)
+
+    assert len(result) == 3
+
+
+def test_confluence_client_list_pages_empty_results(httpx_mock: HTTPXMock):
+    """Test listing pages when no results found."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    response_data = {
+        "results": [],
+        "_links": {},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages?limit=25",
+        json=response_data,
+    )
+
+    result = confluence.list_pages()
+
+    assert len(result) == 0
+    assert result == []
+
+
+def test_confluence_client_list_pages_unauthorized(httpx_mock: HTTPXMock):
+    """Test listing pages with invalid credentials."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="invalid",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages?limit=25",
+        status_code=401,
+        json={"message": "Invalid credentials"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.list_pages()
+
+    assert exc_info.value.status_code == 401
+    assert "Authentication failed" in str(exc_info.value)
+
+
+def test_confluence_client_list_pages_forbidden(httpx_mock: HTTPXMock):
+    """Test listing pages without proper permissions."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/pages?limit=25&space-key=PRIVATE",
+        status_code=403,
+        json={"message": "No access to space"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.list_pages(space_key="PRIVATE")
+
+    assert exc_info.value.status_code == 403
+    assert "Permission denied" in str(exc_info.value)

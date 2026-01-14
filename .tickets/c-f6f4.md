@@ -1,6 +1,6 @@
 ---
 id: c-f6f4
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T15:58:17Z
@@ -34,3 +34,7 @@ Add list_pages() method to ConfluenceClient that lists pages, with optional spac
 - This is foundational for page list command
 - Full pagination support can come later if needed
 
+
+**2026-01-14T16:17:55Z**
+
+Completed: Added list_pages() method to ConfluenceClient with space filtering and limit support. Uses GET /pages endpoint with space-key and limit query params. Added 7 comprehensive tests covering success cases, space filtering, custom limits, empty results, and error cases (401, 403). All 92 tests pass with 96.66% coverage.
