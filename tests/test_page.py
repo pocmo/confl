@@ -400,3 +400,101 @@ class TestListPages:
         result = runner.invoke(app, ["page", "list"])
         assert result.exit_code != 0
         # Typer will complain about missing required option
+
+
+class TestPageDeleteCommand:
+    """Tests for 'confl page delete' command."""
+
+    def test_delete_page_by_id_default_output(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test deleting a page by ID with default output."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["page", "delete", "12345678"])
+        assert result.exit_code == 0
+        assert "12345678" in result.stdout
+        assert "deleted successfully" in result.stdout
+
+    def test_delete_page_json_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test deleting a page with --json flag."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["page", "delete", "12345678", "--json"])
+        assert result.exit_code == 0
+
+        # Parse and verify JSON output
+        output = json.loads(result.stdout)
+        assert output["success"] is True
+        assert output["page_id"] == "12345678"
+        assert "deleted successfully" in output["message"]
+
+    def test_delete_page_by_url(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test deleting a page by URL."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="DELETE",
+            status_code=204,
+        )
+
+        url = "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678/Test-Page"
+        result = runner.invoke(app, ["page", "delete", url])
+        assert result.exit_code == 0
+        assert "12345678" in result.stdout
+        assert "deleted successfully" in result.stdout
+
+    def test_delete_page_already_deleted(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test deleting a page that's already deleted (404 handled gracefully)."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/99999999",
+            method="DELETE",
+            status_code=404,
+            json={"message": "Page not found"},
+        )
+
+        result = runner.invoke(app, ["page", "delete", "99999999"])
+        assert result.exit_code == 0
+        assert "99999999" in result.stdout
+        assert "deleted successfully" in result.stdout
+
+    def test_delete_page_unauthorized(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test deleting a page with invalid credentials."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="DELETE",
+            status_code=401,
+            json={"message": "Unauthorized"},
+        )
+
+        result = runner.invoke(app, ["page", "delete", "12345678"])
+        assert result.exit_code == 1
+        assert "Authentication failed" in result.stderr
+
+    def test_delete_page_forbidden(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test deleting a page without permission."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="DELETE",
+            status_code=403,
+            json={"message": "Forbidden"},
+        )
+
+        result = runner.invoke(app, ["page", "delete", "12345678"])
+        assert result.exit_code == 1
+        assert "Permission denied" in result.stderr
+
+    def test_delete_page_invalid_reference(self, mock_config_env: None) -> None:
+        """Test deleting a page with invalid reference."""
+        result = runner.invoke(app, ["page", "delete", "invalid-reference"])
+        assert result.exit_code == 2
+        assert "Invalid page reference" in result.stderr

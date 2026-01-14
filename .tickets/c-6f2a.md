@@ -1,6 +1,6 @@
 ---
 id: c-6f2a
-status: open
+status: closed
 deps: [c-b3bd]
 links: []
 created: 2026-01-14T15:59:44Z
@@ -33,3 +33,7 @@ Implement the 'confl page delete' command that deletes a page.
 ## Notes
 - Simple command, no complex logic needed
 
+
+**2026-01-14T16:43:38Z**
+
+Completed: Implemented page delete command with ID/URL support, JSON output, graceful 404 handling, and comprehensive tests (7 test cases covering success, errors, and edge cases)

@@ -207,3 +207,38 @@ def list_pages(
 
         if not pages:
             console.print("[yellow]No pages found in this space.[/yellow]")
+
+
+@app.command("delete")
+def delete_page(
+    ref: str = typer.Argument(..., help="Page ID or URL"),
+    json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+) -> None:
+    """Delete a page.
+
+    Examples:
+        confl page delete 12345678
+        confl page delete "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678/Title"
+        confl page delete 12345678 --json
+    """
+    try:
+        page_id = _extract_page_id(ref)
+    except ValueError as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(2)
+
+    # Delete the page
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+        confluence.delete_page(page_id)
+    except ApiError as e:
+        err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Output success
+    if json_output:
+        result = {"success": True, "page_id": page_id, "message": "Page deleted successfully"}
+        print(json.dumps(result, indent=2))
+    else:
+        console.print(f"[green]✓[/green] Page {page_id} deleted successfully")
