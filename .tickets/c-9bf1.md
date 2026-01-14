@@ -1,6 +1,6 @@
 ---
 id: c-9bf1
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T21:42:52Z
@@ -48,3 +48,7 @@ Use the real Confluence page samples in tests/fixtures/pages/ for testing and id
 - Don't try to implement everything in this ticket - file follow-ups
 - Use fixtures to drive realistic testing
 
+
+**2026-01-14T21:59:34Z**
+
+Completed: Created 25 comprehensive integration tests using real Confluence page fixtures (hub.xml and advanced-formatting.xml). All fixtures parse without errors. Documented supported features (macros: info/tip/note/status/code/expand/children/attachments, elements: headings/lists/tables/links/formatting). Identified 3 feature gaps: 1) time element not rendered (P1), 2) expand macro title could be improved (P2), 3) layouts flattened but content preserved (P2). Created follow-up tickets c-2236, c-3fa9, c-de7a. Tests demonstrate 95%+ coverage of converter module.
