@@ -1623,3 +1623,101 @@ class TestUserMentions:
         assert "@john.smith" in result
         assert "@jane-doe" in result
         assert "@bob_jones" in result
+
+
+class TestTimeElements:
+    """Test HTML time element conversion."""
+
+    def test_time_with_datetime_attribute(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = '<p>Due date: <time datetime="2026-02-15" /></p>'
+        result = storage_to_markdown(storage)
+        assert "2026-02-15" in result
+
+    def test_time_with_datetime_and_local_id(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Actual format from Confluence fixtures
+        storage = '<p>Target: <time datetime="2026-02-15" local-id="abc123" /></p>'
+        result = storage_to_markdown(storage)
+        assert "2026-02-15" in result
+
+    def test_time_in_table_cell(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Common use case: dates in table cells
+        storage = """
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Date</th>
+            </tr>
+            <tr>
+                <td>Task 1</td>
+                <td><time datetime="2026-02-15" /></td>
+            </tr>
+        </table>
+        """
+        result = storage_to_markdown(storage)
+        assert "2026-02-15" in result
+
+    def test_time_with_text_content(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Time element with inner text (fallback case)
+        storage = '<p>Due: <time datetime="2026-02-15">February 15, 2026</time></p>'
+        result = storage_to_markdown(storage)
+        # Should use datetime attribute when present
+        assert "2026-02-15" in result
+
+    def test_time_without_datetime(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: time element without datetime attribute but with text
+        storage = "<p>Due: <time>February 15, 2026</time></p>"
+        result = storage_to_markdown(storage)
+        # Should fall back to text content
+        assert "February 15, 2026" in result
+
+    def test_time_without_datetime_or_text(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: time element with no attributes or content
+        storage = "<p>Due: <time /></p>"
+        result = storage_to_markdown(storage)
+        # Should use placeholder
+        assert "[date]" in result
+
+    def test_multiple_time_elements(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>Start: <time datetime="2026-02-10" /> End: <time datetime="2026-02-20" /></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "2026-02-10" in result
+        assert "2026-02-20" in result
+
+    def test_time_in_formatted_text(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <p>Deadline: <strong><time datetime="2026-02-15" /></strong></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "2026-02-15" in result
+        assert "**" in result  # Should preserve bold formatting
+
+    def test_time_in_list(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ul>
+            <li>Phase 1: <time datetime="2026-02-10" /></li>
+            <li>Phase 2: <time datetime="2026-02-20" /></li>
+        </ul>
+        """
+        result = storage_to_markdown(storage)
+        assert "2026-02-10" in result
+        assert "2026-02-20" in result

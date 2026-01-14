@@ -124,18 +124,21 @@ class TestHubPageFixture:
     def test_hub_page_dates(self):
         """Hub page has time/date elements in tables.
 
-        NOTE: <time> elements are not currently rendered - this is a known gap.
-        The time element is self-closing with a datetime attribute.
+        Time elements are self-closing with a datetime attribute.
         Example: <time datetime="2026-02-15" local-id="..." />
         """
         storage = load_fixture("hub.xml")
         result = storage_to_markdown(storage)
 
-        # Time elements exist in the fixture but are not rendered
-        # Tables with "Target Date" column should still be present
+        # Tables with "Target Date" and "Planned" columns should be present
         assert "Target Date" in result
         assert "Planned" in result  # Project Plan table column
-        # The tables themselves render, just not the time content
+
+        # Time elements should now be rendered as their datetime values
+        assert "2026-02-15" in result  # Status Summary table
+        assert "2026-02-20" in result  # Status Summary table
+        assert "2026-02-10" in result  # Project Plan table
+        assert "2026-02-18" in result  # Project Plan table
 
 
 class TestAdvancedFormattingFixture:

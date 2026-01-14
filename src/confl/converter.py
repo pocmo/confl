@@ -572,6 +572,31 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         # If no identifier found, return placeholder
         return "@user"
 
+    def convert_time(self, el: Tag, text: str, **options: Any) -> str:
+        """Convert HTML time element with datetime attribute to formatted date.
+
+        Handles <time> tags with datetime attributes used for date display.
+
+        Example Confluence format:
+            <time datetime="2026-02-15" local-id="..." />
+
+        Result: 2026-02-15
+        """
+        # Extract datetime attribute
+        datetime_attr = el.get("datetime", "")
+        # el.get() can return a list in some edge cases, ensure it's a string
+        datetime_value = datetime_attr if isinstance(datetime_attr, str) else ""
+
+        if datetime_value:
+            return datetime_value
+
+        # Fallback to any text content if no datetime attribute
+        if text.strip():
+            return text.strip()
+
+        # Last resort: return placeholder
+        return "[date]"
+
 
 def storage_to_markdown(storage: str) -> str:
     """
