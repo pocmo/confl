@@ -298,6 +298,174 @@ class TestSpaceListCommand:
         )
         assert result.exit_code == 0
 
+    def test_list_spaces_mine_filter(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test listing spaces with --mine filter."""
+        user_data = {
+            "accountId": "user123",
+            "displayName": "Test User",
+        }
+
+        spaces_data = {
+            "results": [
+                {
+                    "id": "123",
+                    "key": "~user123",
+                    "name": "Test User Personal",
+                    "type": "personal",
+                    "status": "current",
+                    "authorId": "user123",
+                },
+                {
+                    "id": "456",
+                    "key": "DEV",
+                    "name": "Development",
+                    "type": "global",
+                    "status": "current",
+                    "authorId": "other456",
+                },
+            ]
+        }
+
+        # Mock current user endpoint
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            method="GET",
+            json=user_data,
+        )
+
+        # Mock spaces endpoint
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list", "--mine"])
+        assert result.exit_code == 0
+        # Should only show the personal space owned by user123
+        assert "~user123" in result.stdout
+        assert "Test User Personal" in result.stdout
+        # Should NOT show the DEV space owned by other user
+        assert "DEV" not in result.stdout
+
+    def test_list_spaces_favorited_filter(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces with --favorited filter."""
+        user_data = {
+            "accountId": "user123",
+            "displayName": "Test User",
+        }
+
+        spaces_data = {
+            "results": [
+                {
+                    "id": "123",
+                    "key": "FAV",
+                    "name": "Favorited Space",
+                    "type": "global",
+                    "status": "current",
+                },
+            ]
+        }
+
+        # Mock current user endpoint
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            method="GET",
+            json=user_data,
+        )
+
+        # Mock spaces endpoint with favorited-by filter
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name&favorited-by=user123",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list", "--favorited"])
+        assert result.exit_code == 0
+        assert "FAV" in result.stdout
+        assert "Favorited Space" in result.stdout
+
+    def test_list_spaces_labels_filter(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test listing spaces with --label filter."""
+        spaces_data = {
+            "results": [
+                {
+                    "id": "123",
+                    "key": "TEAM",
+                    "name": "Team Space",
+                    "type": "global",
+                    "status": "current",
+                },
+            ]
+        }
+
+        # Mock spaces endpoint with labels filter
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name&labels=team&labels=engineering",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list", "--label", "team", "--label", "engineering"])
+        assert result.exit_code == 0
+        assert "TEAM" in result.stdout
+        assert "Team Space" in result.stdout
+
+    def test_list_spaces_combined_filters(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces with multiple filters combined."""
+        user_data = {
+            "accountId": "user123",
+            "displayName": "Test User",
+        }
+
+        spaces_data = {
+            "results": [
+                {
+                    "id": "123",
+                    "key": "~user123",
+                    "name": "My Personal Space",
+                    "type": "personal",
+                    "status": "current",
+                    "authorId": "user123",
+                },
+            ]
+        }
+
+        # Mock current user endpoint
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            method="GET",
+            json=user_data,
+        )
+
+        # Mock spaces endpoint with multiple filters
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=personal&status=current&sort=name",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "space",
+                "list",
+                "--type",
+                "personal",
+                "--status",
+                "current",
+                "--mine",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "~user123" in result.stdout
+        assert "My Personal Space" in result.stdout
+
 
 class TestSpaceGetCommand:
     """Tests for 'confl space get' command."""

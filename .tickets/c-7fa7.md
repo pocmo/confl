@@ -1,6 +1,6 @@
 ---
 id: c-7fa7
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T10:16:58Z
@@ -43,3 +43,7 @@ Add ability to filter spaces in 'confl space list' by type, status, or other cri
 - Personal spaces are a common filter need
 - Similar to 'gh repo list --visibility' pattern
 
+
+**2026-01-15T11:43:56Z**
+
+Completed: Added filtering options --mine, --favorited, and --label to confl space list. Implemented get_current_user API method. API-side filtering for favorited and labels, client-side filtering for --mine (by authorId).

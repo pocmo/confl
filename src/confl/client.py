@@ -545,6 +545,8 @@ class ConfluenceClient:
         type_filter: str | None = None,
         status_filter: str | None = None,
         sort: str | None = None,
+        favorited_by: str | None = None,
+        labels: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """List spaces with optional filtering and sorting.
 
@@ -554,6 +556,8 @@ class ConfluenceClient:
             type_filter: Optional filter by space type (global, personal)
             status_filter: Optional filter by space status (current, archived)
             sort: Optional sort parameter (e.g., 'name', '-name' for descending)
+            favorited_by: Optional account ID to filter by favorited spaces
+            labels: Optional list of labels to filter spaces by
 
         Returns:
             List of space objects with metadata (id, key, name, type, status)
@@ -573,6 +577,10 @@ class ConfluenceClient:
                 params["status"] = status_filter
             if sort:
                 params["sort"] = sort
+            if favorited_by:
+                params["favorited-by"] = favorited_by
+            if labels:
+                params["labels"] = labels
             if cursor:
                 params["cursor"] = cursor
 
@@ -1590,6 +1598,22 @@ class ConfluenceClient:
         payload = {"status": status}
 
         response = self.client.put(f"/tasks/{task_id}", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def get_current_user(self) -> dict[str, Any]:
+        """Get the current authenticated user.
+
+        Returns:
+            User data including accountId, displayName, etc.
+
+        Raises:
+            ApiError: If the request fails
+        """
+        response = self.client.get("/user/current")
 
         if response.status_code != 200:
             handle_api_error(response)

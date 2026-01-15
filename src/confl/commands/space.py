@@ -18,6 +18,11 @@ app = typer.Typer(help="Manage spaces")
 console = Console()
 err_console = Console(stderr=True)
 
+# Define default option for labels to avoid B008 ruff error
+DEFAULT_LABELS_OPTION = typer.Option(
+    None, "--label", help="Filter by space label (can be specified multiple times)"
+)
+
 
 def _extract_space_id_or_key(ref: str) -> str:
     """Extract space identifier from reference.
@@ -52,6 +57,11 @@ def list_spaces(
         "--order",
         help="Sort order: asc or desc (default: asc)",
     ),
+    mine: bool = typer.Option(False, "--mine", help="Show only spaces owned by current user"),
+    favorited: bool = typer.Option(
+        False, "--favorited", help="Show only spaces favorited by current user"
+    ),
+    labels: list[str] | None = DEFAULT_LABELS_OPTION,
 ) -> None:
     """List spaces.
 
@@ -64,6 +74,9 @@ def list_spaces(
         confl space list --status current
         confl space list --sort name --order desc
         confl space list --sort created --order desc
+        confl space list --mine
+        confl space list --favorited
+        confl space list --label team --label engineering
         confl space list --json
     """
     # Validate order parameter
@@ -87,12 +100,32 @@ def list_spaces(
     try:
         client = get_client()
         confluence = ConfluenceClient(client)
+
+        # Get current user if needed for --mine or --favorited
+        current_user_id = None
+        if mine or favorited:
+            user = confluence.get_current_user()
+            current_user_id = user.get("accountId")
+            if not current_user_id:
+                err_console.print("[red]Error:[/red] Could not determine current user ID")
+                sys.exit(1)
+
+        # Set up API filters
+        favorited_by = current_user_id if favorited else None
+
         spaces = confluence.list_spaces(
             limit=limit,
             type_filter=type_filter,
             status_filter=status_filter,
             sort=sort_param,
+            favorited_by=favorited_by,
+            labels=labels if labels else None,
         )
+
+        # Apply client-side filter for --mine (filter by authorId)
+        if mine and current_user_id:
+            spaces = [s for s in spaces if s.get("authorId") == current_user_id]
+
     except ApiError as e:
         if json_output and e.response_data:
             print(json.dumps(e.response_data, indent=2), file=sys.stderr)
