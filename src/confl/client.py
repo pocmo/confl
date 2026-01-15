@@ -173,29 +173,55 @@ def handle_api_error(response: httpx.Response) -> None:
     # Provide context based on status code
     if status == 401:
         raise ApiError(
-            f"Authentication failed: {message}\nCheck your credentials with 'confl auth status'",
+            f"Authentication failed: {message}\n\n"
+            "Possible solutions:\n"
+            "  • Check your credentials: confl auth status\n"
+            "  • Re-authenticate: confl auth login\n"
+            "  • Verify your API token is still valid at:\n"
+            "    https://id.atlassian.com/manage-profile/security/api-tokens",
             status_code=status,
             response_data=error_data,
         )
     elif status == 403:
         raise ApiError(
-            f"Permission denied: {message}\nYour credentials may not have access to this resource",
+            f"Permission denied: {message}\n\n"
+            "Possible causes:\n"
+            "  • Your account may not have permission to access this resource\n"
+            "  • The page/space may be restricted\n"
+            "  • Check with your Confluence administrator if you need access",
             status_code=status,
             response_data=error_data,
         )
     elif status == 404:
-        raise ApiError(f"Not found: {message}", status_code=status, response_data=error_data)
+        raise ApiError(
+            f"Not found: {message}\n\n"
+            "Possible causes:\n"
+            "  • The page/space may have been deleted or moved\n"
+            "  • You may not have permission to view it\n"
+            "  • The ID or URL may be incorrect\n"
+            "Tip: Use 'confl search <query>' to find the resource",
+            status_code=status,
+            response_data=error_data,
+        )
     elif status == 409:
         raise ApiError(
-            f"Version conflict: {message}\n"
-            "The page has been modified since you fetched it. "
-            "Fetch the latest version and try again.",
+            f"Version conflict: {message}\n\n"
+            "The page has been modified since you fetched it.\n"
+            "Solution:\n"
+            "  1. Fetch the latest version: confl page get <page-id>\n"
+            "  2. Merge your changes with the latest content\n"
+            "  3. Try updating again with the new version number",
             status_code=status,
             response_data=error_data,
         )
     elif status == 429:
         raise ApiError(
-            f"Rate limit exceeded: {message}\nPlease wait before making more requests",
+            f"Rate limit exceeded: {message}\n\n"
+            "You're making requests too quickly.\n"
+            "Solutions:\n"
+            "  • Wait 60 seconds and try again\n"
+            "  • Add delays between bulk operations\n"
+            "  • Reduce the number of concurrent requests",
             status_code=status,
             response_data=error_data,
         )

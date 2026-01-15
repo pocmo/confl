@@ -2,6 +2,7 @@
 
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -223,8 +224,6 @@ def add_comment(
 
         # Get body content
         if body_file:
-            from pathlib import Path
-
             body_text = Path(body_file).read_text()
         else:
             body_text = body or ""
@@ -265,7 +264,14 @@ def add_comment(
         )
 
     except FileNotFoundError as e:
-        err_console.print(f"[red]Error:[/red] {e}")
+        err_console.print(
+            f"[red]Error:[/red] {e}\n\n"
+            "Please check:\n"
+            "  • The file path is correct\n"
+            "  • The file exists in the current directory\n"
+            "  • You have permission to read the file\n\n"
+            f"Current directory: {Path.cwd()}"
+        )
         sys.exit(1)
     except ApiError as e:
         if json_output and e.response_data:
@@ -306,8 +312,6 @@ def update_comment(
 
         # Get body content
         if body_file:
-            from pathlib import Path
-
             body_text = Path(body_file).read_text()
         else:
             body_text = body or ""
@@ -337,7 +341,14 @@ def update_comment(
         result = confluence.update_footer_comment(comment_id, storage_body)
 
     except FileNotFoundError as e:
-        err_console.print(f"[red]Error:[/red] {e}")
+        err_console.print(
+            f"[red]Error:[/red] {e}\n\n"
+            "Please check:\n"
+            "  • The file path is correct\n"
+            "  • The file exists in the current directory\n"
+            "  • You have permission to read the file\n\n"
+            f"Current directory: {Path.cwd()}"
+        )
         sys.exit(1)
     except ApiError as e:
         if json_output and e.response_data:

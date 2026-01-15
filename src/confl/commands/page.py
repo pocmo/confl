@@ -3,6 +3,7 @@
 import json
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -42,7 +43,16 @@ def _extract_page_id(ref: str) -> str:
     if match:
         return match.group(1)
 
-    raise ValueError(f"Invalid page reference: {ref}")
+    raise ValueError(
+        f"Invalid page reference: {ref!r}\n\n"
+        "Page references must be either:\n"
+        "  • A numeric page ID (e.g., 12345678)\n"
+        "  • A full Confluence page URL\n\n"
+        "Examples:\n"
+        "  confl page get 12345678\n"
+        '  confl page get "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678"\n\n'
+        "Tip: Use 'confl search <query>' to find page IDs"
+    )
 
 
 def _format_page_metadata(page: dict[str, Any]) -> str:
@@ -373,7 +383,14 @@ def create_page(
             with open(body_file, encoding="utf-8") as f:
                 content = f.read()
         except FileNotFoundError:
-            err_console.print(f"[red]Error:[/red] File not found: {body_file}")
+            err_console.print(
+                f"[red]Error:[/red] File not found: {body_file}\n\n"
+                "Please check:\n"
+                "  • The file path is correct\n"
+                "  • The file exists in the current directory\n"
+                "  • You have permission to read the file\n\n"
+                f"Current directory: {Path.cwd()}"
+            )
             sys.exit(2)
         except Exception as e:
             err_console.print(f"[red]Error:[/red] Failed to read file: {e}")
@@ -510,7 +527,14 @@ def update_page(
             with open(body_file, encoding="utf-8") as f:
                 content = f.read()
         except FileNotFoundError:
-            err_console.print(f"[red]Error:[/red] File not found: {body_file}")
+            err_console.print(
+                f"[red]Error:[/red] File not found: {body_file}\n\n"
+                "Please check:\n"
+                "  • The file path is correct\n"
+                "  • The file exists in the current directory\n"
+                "  • You have permission to read the file\n\n"
+                f"Current directory: {Path.cwd()}"
+            )
             sys.exit(2)
         except Exception as e:
             err_console.print(f"[red]Error:[/red] Failed to read file: {e}")

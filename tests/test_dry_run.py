@@ -2,7 +2,6 @@
 
 import json
 
-import pytest
 from typer.testing import CliRunner
 
 from confl.cli import app
@@ -115,9 +114,7 @@ class TestDryRunMode:
 
     def test_label_add_dry_run(self):
         """Test dry-run mode for label add."""
-        result = runner.invoke(
-            app, ["label", "add", "--page", "12345", "test-label", "--dry-run"]
-        )
+        result = runner.invoke(app, ["label", "add", "--page", "12345", "test-label", "--dry-run"])
         assert result.exit_code == 0
         assert "DRY RUN" in result.stdout
         assert "Would add 1 label(s) to page 12345" in result.stdout

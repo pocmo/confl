@@ -64,8 +64,12 @@ def get_config() -> Config:
         creds = load_credentials()
         if creds is None:
             raise ConfigError(
-                "Partial environment configuration requires credentials file.\n"
-                "Missing credentials file. Run 'confl auth login' to store credentials."
+                "Partial environment configuration requires credentials file.\n\n"
+                "You've set some CONFL_* environment variables but not all.\n"
+                "Solution:\n"
+                "  • Set all three: CONFL_SITE, CONFL_EMAIL, CONFL_TOKEN\n"
+                "  • Or run 'confl auth login' to store credentials in file\n"
+                "  • Or unset partial env vars to use credentials file only"
             )
 
         # Use env vars where set, fall back to credentials file
@@ -80,9 +84,15 @@ def get_config() -> Config:
     creds = load_credentials()
     if creds is None:
         raise ConfigError(
-            "No configuration found.\n"
-            "Set environment variables (CONFL_SITE, CONFL_EMAIL, CONFL_TOKEN) "
-            "or run 'confl auth login' to store credentials."
+            "No configuration found.\n\n"
+            "To get started:\n"
+            "  1. Run: confl auth login\n"
+            "  2. Or set environment variables:\n"
+            "     export CONFL_SITE=mycompany.atlassian.net\n"
+            "     export CONFL_EMAIL=user@example.com\n"
+            "     export CONFL_TOKEN=your-api-token\n\n"
+            "To create an API token:\n"
+            "  Visit https://id.atlassian.com/manage-profile/security/api-tokens"
         )
 
     return _validate_and_create_config(creds["site"], creds["email"], creds["token"])
@@ -105,16 +115,30 @@ def _validate_and_create_config(site: str, email: str, token: str) -> Config:
     # Validate site looks like a hostname
     if not site or "://" in site or site.startswith("/"):
         raise ConfigError(
-            f"Invalid site: {site!r}\n"
-            "Site should be a hostname like 'mycompany.atlassian.net', not a URL."
+            f"Invalid site: {site!r}\n\n"
+            "Site should be a hostname, not a full URL.\n"
+            "Correct format: mycompany.atlassian.net\n"
+            "Incorrect: https://mycompany.atlassian.net\n"
+            "Incorrect: https://mycompany.atlassian.net/wiki"
         )
 
     # Validate email looks reasonable (basic check)
     if not email or "@" not in email:
-        raise ConfigError(f"Invalid email: {email!r}\nEmail should contain '@'.")
+        raise ConfigError(
+            f"Invalid email: {email!r}\n\n"
+            "Email should be a valid email address.\n"
+            "Example: user@example.com"
+        )
 
     # Validate token is not empty
     if not token:
-        raise ConfigError("API token cannot be empty.")
+        raise ConfigError(
+            "API token cannot be empty.\n\n"
+            "To create an API token:\n"
+            "  1. Visit https://id.atlassian.com/manage-profile/security/api-tokens\n"
+            "  2. Click 'Create API token'\n"
+            "  3. Give it a descriptive name (e.g., 'confl CLI')\n"
+            "  4. Copy the token and use it with 'confl auth login'"
+        )
 
     return Config(site=site, email=email, token=token)

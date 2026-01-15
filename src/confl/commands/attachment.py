@@ -226,7 +226,14 @@ def upload_attachment(
         # Check if file exists before dry-run output
         file_path = Path(file)
         if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file}")
+            raise FileNotFoundError(
+                f"File not found: {file}\n\n"
+                "Please check:\n"
+                "  • The file path is correct\n"
+                "  • The file exists in the current directory\n"
+                "  • You have permission to read the file\n\n"
+                f"Current directory: {Path.cwd()}"
+            )
 
         # Dry-run mode
         if dry_run:

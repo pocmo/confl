@@ -3,6 +3,7 @@
 import json
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -46,7 +47,16 @@ def _extract_blogpost_id(ref: str) -> str:
     if match:
         return match.group(1)
 
-    raise ValueError(f"Invalid blog post reference: {ref}")
+    raise ValueError(
+        f"Invalid blog post reference: {ref!r}\n\n"
+        "Blog post references must be either:\n"
+        "  • A numeric blog post ID (e.g., 12345678)\n"
+        "  • A full Confluence blog post URL\n\n"
+        "Examples:\n"
+        "  confl blogpost get 12345678\n"
+        '  confl blogpost get "https://company.atlassian.net/wiki/spaces/DEV/blogposts/12345678"\n\n'
+        "Tip: Use 'confl search <query> --type blogpost' to find blog post IDs"
+    )
 
 
 def _format_blogpost_metadata(blogpost: dict[str, Any]) -> str:
@@ -395,7 +405,14 @@ def create_blogpost(
             with open(body_file, encoding="utf-8") as f:
                 content = f.read()
         except FileNotFoundError:
-            err_console.print(f"[red]Error:[/red] File not found: {body_file}")
+            err_console.print(
+                f"[red]Error:[/red] File not found: {body_file}\n\n"
+                "Please check:\n"
+                "  • The file path is correct\n"
+                "  • The file exists in the current directory\n"
+                "  • You have permission to read the file\n\n"
+                f"Current directory: {Path.cwd()}"
+            )
             sys.exit(2)
         except Exception as e:
             err_console.print(f"[red]Error:[/red] Failed to read file: {e}")
@@ -529,7 +546,14 @@ def update_blogpost(
             with open(body_file, encoding="utf-8") as f:
                 content = f.read()
         except FileNotFoundError:
-            err_console.print(f"[red]Error:[/red] File not found: {body_file}")
+            err_console.print(
+                f"[red]Error:[/red] File not found: {body_file}\n\n"
+                "Please check:\n"
+                "  • The file path is correct\n"
+                "  • The file exists in the current directory\n"
+                "  • You have permission to read the file\n\n"
+                f"Current directory: {Path.cwd()}"
+            )
             sys.exit(2)
         except Exception as e:
             err_console.print(f"[red]Error:[/red] Failed to read file: {e}")
