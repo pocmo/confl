@@ -1,6 +1,6 @@
 ---
 id: c-fe0c
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T22:07:01Z
@@ -12,3 +12,9 @@ assignee: Sebastian Kaspari
 
 Implement the 'blogpost' CLI entity with commands: list, get, create, update, delete. Blog posts are time-ordered content similar to pages. Reference: docs/architecture/cli-subcommands.md Phase 2. Commands: confl blogpost list --space <key>, confl blogpost get <id>, confl blogpost create, confl blogpost update <id>, confl blogpost delete <id>. Reuse page rendering logic (same storage format), support attachments/labels/comments like pages.
 
+
+## Notes
+
+**2026-01-15T03:55:05Z**
+
+Completed: Implemented blogpost subcommand with full CRUD operations (list, get, create, update, delete). Added 5 client methods, 5 CLI commands with markdown/JSON/raw output modes, 17 comprehensive tests (all passing), and updated README with examples.

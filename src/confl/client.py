@@ -867,6 +867,157 @@ class ConfluenceClient:
         result = cast(dict[str, Any], response.json())
         return cast(list[dict[str, Any]], result.get("results", []))
 
+    def list_blogposts(self, space_id: str | None = None, limit: int = 25) -> list[dict[str, Any]]:
+        """List blog posts, optionally filtered by space.
+
+        Args:
+            space_id: Optional space ID to filter by
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of blog post objects with basic metadata (id, title, spaceId)
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        if space_id:
+            params["space-id"] = space_id
+
+        response = self.client.get("/blogposts", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def get_blogpost(self, blogpost_id: str) -> dict[str, Any]:
+        """Get a blog post by ID.
+
+        Args:
+            blogpost_id: Blog post ID
+
+        Returns:
+            Blog post data including id, title, body content
+
+        Raises:
+            ApiError: If the request fails
+        """
+        response = self.client.get(
+            f"/blogposts/{blogpost_id}",
+            params={
+                "body-format": "storage",
+            },
+        )
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def create_blogpost(
+        self,
+        space_id: str,
+        title: str,
+        body: str,
+    ) -> dict[str, Any]:
+        """Create a new blog post in a space.
+
+        Args:
+            space_id: Space ID where blog post will be created
+            title: Blog post title
+            body: Blog post body content in storage format
+
+        Returns:
+            Created blog post data including new blog post ID, title, version, etc.
+
+        Raises:
+            ApiError: If the request fails (e.g., duplicate title, invalid space)
+        """
+        payload: dict[str, Any] = {
+            "spaceId": space_id,
+            "status": "current",
+            "title": title,
+            "body": {
+                "representation": "storage",
+                "value": body,
+            },
+        }
+
+        response = self.client.post("/blogposts", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def update_blogpost(
+        self,
+        blogpost_id: str,
+        title: str,
+        body: str,
+        version_number: int,
+    ) -> dict[str, Any]:
+        """Update an existing blog post's content.
+
+        Args:
+            blogpost_id: Blog post ID to update
+            title: New blog post title
+            body: New blog post body content in storage format
+            version_number: Current version number for optimistic locking
+
+        Returns:
+            Updated blog post data including id, title, body content, and new version
+
+        Raises:
+            ApiError: If the request fails, including version conflicts (409)
+        """
+        payload = {
+            "id": blogpost_id,
+            "status": "current",
+            "title": title,
+            "body": {
+                "representation": "storage",
+                "value": body,
+            },
+            "version": {
+                "number": version_number,
+            },
+        }
+
+        response = self.client.put(f"/blogposts/{blogpost_id}", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def delete_blogpost(self, blogpost_id: str) -> None:
+        """Delete a blog post by ID.
+
+        Args:
+            blogpost_id: Blog post ID to delete
+
+        Raises:
+            ApiError: If the request fails (except 404 which is handled gracefully)
+
+        Note:
+            Deletion in Confluence typically moves the blog post to trash (soft delete).
+            404 errors are handled gracefully since the end result is the same:
+            the blog post no longer exists.
+        """
+        response = self.client.delete(f"/blogposts/{blogpost_id}")
+
+        # Accept both 204 (No Content - successful deletion) and 404 (already gone)
+        if response.status_code == 204:
+            return
+        elif response.status_code == 404:
+            # Blog post already deleted or doesn't exist - that's fine
+            return
+        else:
+            handle_api_error(response)
+
     def list_attachments_by_label(self, label_id: str, limit: int = 25) -> list[dict[str, Any]]:
         """List attachments with a specific label.
 

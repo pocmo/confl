@@ -152,3 +152,66 @@ confl comment get 789012 --json
 - Use `--page` to comment on a page or `--parent` to reply to an existing comment
 - Both footer comments (page-level) and inline comments (location-specific) are supported
 - The `--include-inline` flag includes inline comments in list results
+
+### blogpost
+
+Manage blog posts in Confluence spaces. Blog posts are time-ordered content similar to pages but displayed chronologically.
+
+**Commands:**
+
+- `confl blogpost list` — List blog posts in a space
+- `confl blogpost get` — Get blog post details and content
+- `confl blogpost create` — Create a new blog post
+- `confl blogpost update` — Update an existing blog post's content and/or title
+- `confl blogpost delete` — Delete a blog post
+
+**Examples:**
+
+```bash
+# List all blog posts in a space
+confl blogpost list --space DEV
+
+# Get a specific blog post
+confl blogpost get 654321
+
+# Get blog post by URL
+confl blogpost get "https://company.atlassian.net/wiki/spaces/DEV/blogposts/654321/Title"
+
+# Get blog post content as markdown
+confl blogpost get 654321 --markdown
+
+# Get blog post as raw storage format
+confl blogpost get 654321 --raw
+
+# Create a new blog post
+confl blogpost create --space DEV --title "Release Notes v1.0" --body "# New Features..."
+
+# Create blog post from a markdown file
+confl blogpost create --space DEV --title "Announcement" --body-file post.md
+
+# Create blog post from stdin
+cat post.md | confl blogpost create --space DEV --title "Update"
+
+# Update blog post content
+confl blogpost update 654321 --body "# Updated content..."
+
+# Update blog post title
+confl blogpost update 654321 --title "New Title"
+
+# Update both title and content
+confl blogpost update 654321 --title "New Title" --body "# Updated..."
+
+# Delete a blog post
+confl blogpost delete 654321
+
+# Get results as JSON
+confl blogpost list --space DEV --json
+confl blogpost get 654321 --json
+```
+
+**Notes:**
+- Blog posts use the same storage format as pages and support Markdown input/output
+- Blog posts support attachments, labels, and comments (use corresponding commands with blog post IDs)
+- Deletion moves blog posts to trash (soft delete) - they can be restored from the web UI
+- Use `--raw` flag with create/update to provide content in Confluence storage format directly
+- Blog posts appear in chronological order, making them ideal for release notes, announcements, and updates
