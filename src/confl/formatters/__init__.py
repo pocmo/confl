@@ -1,5 +1,6 @@
 """Formatting utilities for human-readable output."""
 
+import re
 from datetime import UTC, datetime
 
 
@@ -119,3 +120,52 @@ def format_duration(seconds: float) -> str:
         if remaining_minutes > 0:
             return f"{hours}h {remaining_minutes}m"
         return f"{hours}h"
+
+
+def strip_markdown(markdown_text: str) -> str:
+    """Strip markdown formatting to produce plain text.
+
+    Args:
+        markdown_text: Markdown formatted text
+
+    Returns:
+        Plain text with markdown syntax removed
+    """
+    text = markdown_text
+
+    # Remove code blocks (```...```)
+    text = re.sub(r"```[\s\S]*?```", "", text)
+
+    # Remove inline code (`...`)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+
+    # Remove bold/italic (**text**, *text*, __text__, _text_)
+    text = re.sub(r"\*\*([^\*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    text = re.sub(r"\*([^\*]+)\*", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
+
+    # Remove links [text](url) -> text
+    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+
+    # Remove images ![alt](url)
+    text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)
+
+    # Remove headers (#, ##, ###, etc.)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+
+    # Remove blockquotes (>)
+    text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)
+
+    # Remove horizontal rules (---, ***, ___)
+    text = re.sub(r"^(\*{3,}|-{3,}|_{3,})$", "", text, flags=re.MULTILINE)
+
+    # Remove list markers (-, *, +, 1.)
+    text = re.sub(r"^[\s]*[-\*\+]\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[\s]*\d+\.\s+", "", text, flags=re.MULTILINE)
+
+    # Clean up extra whitespace
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = text.strip()
+
+    return text

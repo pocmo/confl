@@ -1,10 +1,8 @@
 """Blog post commands."""
 
 import json
-import re
 import sys
 from pathlib import Path
-from typing import Any
 
 import typer
 from rich.console import Console
@@ -12,151 +10,20 @@ from rich.markdown import Markdown
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
-from confl.formatters import format_relative_time
+from confl.formatters import format_relative_time, strip_markdown
+from confl.formatters.blogpost_formatter import (
+    format_blogpost_metadata,
+    get_blogpost_content,
+)
 from confl.table_formatter import (
     add_column_with_ellipsis,
     create_table,
 )
+from confl.utils.blogpost_helpers import extract_blogpost_id
 
 app = typer.Typer(help="Manage blog posts")
 console = Console()
 err_console = Console(stderr=True)
-
-
-def _extract_blogpost_id(ref: str) -> str:
-    """Extract blog post ID from a reference (ID or URL).
-
-    Args:
-        ref: Blog post reference - either a numeric ID or Confluence URL
-
-    Returns:
-        Blog post ID as string
-
-    Raises:
-        ValueError: If the reference is invalid
-    """
-    # If it's just a number, return it
-    if ref.isdigit():
-        return ref
-
-    # Try to extract from URL
-    # URL patterns:
-    # https://company.atlassian.net/wiki/spaces/KEY/blog/2024/01/15/12345678/Title
-    # https://company.atlassian.net/wiki/spaces/KEY/blogposts/12345678/Title
-    match = re.search(r"/blogposts?/(\d+)", ref)
-    if not match:
-        # Try alternate pattern with date path
-        match = re.search(r"/blog/\d{4}/\d{2}/\d{2}/(\d+)", ref)
-
-    if match:
-        return match.group(1)
-
-    raise ValueError(
-        f"Invalid blog post reference: {ref!r}\n\n"
-        "Blog post references must be either:\n"
-        "  • A numeric blog post ID (e.g., 12345678)\n"
-        "  • A full Confluence blog post URL\n\n"
-        "Examples:\n"
-        "  confl blogpost get 12345678\n"
-        '  confl blogpost get "https://company.atlassian.net/wiki/spaces/DEV/blogposts/12345678"\n\n'
-        "Tip: Use 'confl search <query> --type blogpost' to find blog post IDs"
-    )
-
-
-def _format_blogpost_metadata(blogpost: dict[str, Any]) -> str:
-    """Format blog post metadata as a header.
-
-    Args:
-        blogpost: Blog post data from API
-
-    Returns:
-        Formatted metadata string
-    """
-    lines = []
-    lines.append(f"Title: {blogpost.get('title', 'Untitled')}")
-
-    # Space key
-    if "spaceId" in blogpost:
-        lines.append(f"Space: {blogpost['spaceId']}")
-
-    # Author (from version history)
-    version = blogpost.get("version", {})
-    if "authorId" in version:
-        lines.append(f"Author: {version['authorId']}")
-
-    # Updated timestamp
-    if "createdAt" in version:
-        timestamp = version["createdAt"]
-        relative_time = format_relative_time(timestamp)
-        lines.append(f"Published: {relative_time}")
-
-    lines.append("---")
-    return "\n".join(lines)
-
-
-def _get_blogpost_content(blogpost: dict[str, Any], format_type: str = "storage") -> str:
-    """Extract blog post content in the specified format.
-
-    Args:
-        blogpost: Blog post data from API
-        format_type: Content format ("storage" or "atlas_doc_format")
-
-    Returns:
-        Blog post content as string
-    """
-    body = blogpost.get("body", {})
-    format_data = body.get(format_type, {})
-    value = format_data.get("value", "")
-    return str(value)
-
-
-def _strip_markdown(markdown_text: str) -> str:
-    """Strip markdown formatting to produce plain text.
-
-    Args:
-        markdown_text: Markdown formatted text
-
-    Returns:
-        Plain text with markdown syntax removed
-    """
-    text = markdown_text
-
-    # Remove code blocks (```...```)
-    text = re.sub(r"```[\s\S]*?```", "", text)
-
-    # Remove inline code (`...`)
-    text = re.sub(r"`([^`]+)`", r"\1", text)
-
-    # Remove bold/italic (**text**, *text*, __text__, _text_)
-    text = re.sub(r"\*\*([^\*]+)\*\*", r"\1", text)
-    text = re.sub(r"__([^_]+)__", r"\1", text)
-    text = re.sub(r"\*([^\*]+)\*", r"\1", text)
-    text = re.sub(r"_([^_]+)_", r"\1", text)
-
-    # Remove links [text](url) -> text
-    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
-
-    # Remove images ![alt](url)
-    text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)
-
-    # Remove headers (#, ##, ###, etc.)
-    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
-
-    # Remove blockquotes (>)
-    text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)
-
-    # Remove horizontal rules (---, ***, ___)
-    text = re.sub(r"^(\*{3,}|-{3,}|_{3,})$", "", text, flags=re.MULTILINE)
-
-    # Remove list markers (-, *, +, 1.)
-    text = re.sub(r"^[\s]*[-\*\+]\s+", "", text, flags=re.MULTILINE)
-    text = re.sub(r"^[\s]*\d+\.\s+", "", text, flags=re.MULTILINE)
-
-    # Clean up extra whitespace
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    text = text.strip()
-
-    return text
 
 
 @app.command("get")
@@ -182,7 +49,7 @@ def get_blogpost(
         confl blogpost get 12345678 --body-only
     """
     try:
-        blogpost_id = _extract_blogpost_id(ref)
+        blogpost_id = extract_blogpost_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -214,32 +81,32 @@ def get_blogpost(
     if json_output:
         print(json.dumps(blogpost, indent=2))
     elif raw:
-        content = _get_blogpost_content(blogpost, "storage")
+        content = get_blogpost_content(blogpost, "storage")
         if not body_only:
-            console.print(_format_blogpost_metadata(blogpost))
+            console.print(format_blogpost_metadata(blogpost))
         print(content)
     elif markdown:
         # Output raw markdown (converted from storage)
-        content = _get_blogpost_content(blogpost, "storage")
+        content = get_blogpost_content(blogpost, "storage")
         markdown_content = storage_to_markdown(content)
         if not body_only:
-            console.print(_format_blogpost_metadata(blogpost))
+            console.print(format_blogpost_metadata(blogpost))
         print(markdown_content)
     elif plain:
         # Output plain text (converted from storage, stripped of markdown)
-        content = _get_blogpost_content(blogpost, "storage")
+        content = get_blogpost_content(blogpost, "storage")
         markdown_content = storage_to_markdown(content)
-        plain_content = _strip_markdown(markdown_content)
+        plain_content = strip_markdown(markdown_content)
         if not body_only:
-            console.print(_format_blogpost_metadata(blogpost))
+            console.print(format_blogpost_metadata(blogpost))
         print(plain_content)
     else:
         # Default: Rich terminal output with Markdown rendering
         if not body_only:
-            console.print(_format_blogpost_metadata(blogpost))
+            console.print(format_blogpost_metadata(blogpost))
 
         # Get storage content and convert to Markdown
-        content = _get_blogpost_content(blogpost, "storage")
+        content = get_blogpost_content(blogpost, "storage")
         markdown_content = storage_to_markdown(content)
 
         # Render with Rich's Markdown renderer
@@ -339,7 +206,7 @@ def delete_blogpost(
         confl blogpost delete 12345678 --dry-run
     """
     try:
-        blogpost_id = _extract_blogpost_id(ref)
+        blogpost_id = extract_blogpost_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -546,7 +413,7 @@ def update_blogpost(
     """
     # Extract blog post ID
     try:
-        blogpost_id = _extract_blogpost_id(ref)
+        blogpost_id = extract_blogpost_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -635,7 +502,7 @@ def update_blogpost(
         storage_content = content if raw else markdown_to_storage(content)
     else:
         # No new content provided, keep existing
-        storage_content = _get_blogpost_content(current_blogpost, "storage")
+        storage_content = get_blogpost_content(current_blogpost, "storage")
 
     # Update the blog post
     try:

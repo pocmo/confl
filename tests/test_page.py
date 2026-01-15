@@ -7,7 +7,7 @@ from pytest_httpx import HTTPXMock
 from typer.testing import CliRunner
 
 from confl.cli import app
-from confl.commands.page import _extract_page_id
+from confl.utils.page_helpers import extract_page_id
 
 runner = CliRunner()
 
@@ -25,27 +25,27 @@ class TestExtractPageId:
 
     def test_numeric_id(self):
         """Test extraction from numeric ID."""
-        assert _extract_page_id("12345678") == "12345678"
+        assert extract_page_id("12345678") == "12345678"
 
     def test_url_with_title(self):
         """Test extraction from URL with title."""
         url = "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678/Page-Title"
-        assert _extract_page_id(url) == "12345678"
+        assert extract_page_id(url) == "12345678"
 
     def test_url_without_title(self):
         """Test extraction from URL without title."""
         url = "https://company.atlassian.net/wiki/spaces/DEV/pages/98765432"
-        assert _extract_page_id(url) == "98765432"
+        assert extract_page_id(url) == "98765432"
 
     def test_invalid_reference(self):
         """Test invalid reference raises ValueError."""
         with pytest.raises(ValueError, match="Invalid page reference"):
-            _extract_page_id("not-a-valid-reference")
+            extract_page_id("not-a-valid-reference")
 
     def test_invalid_url(self):
         """Test URL without page ID raises ValueError."""
         with pytest.raises(ValueError, match="Invalid page reference"):
-            _extract_page_id("https://company.atlassian.net/wiki/spaces/DEV")
+            extract_page_id("https://company.atlassian.net/wiki/spaces/DEV")
 
 
 class TestPageGetCommand:

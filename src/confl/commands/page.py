@@ -1,10 +1,8 @@
 """Page commands."""
 
 import json
-import re
 import sys
 from pathlib import Path
-from typing import Any
 
 import typer
 from rich.console import Console
@@ -13,149 +11,21 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
-from confl.formatters import format_relative_time
+from confl.formatters import format_relative_time, strip_markdown
+from confl.formatters.page_formatter import (
+    format_page_metadata,
+    get_page_content,
+)
 from confl.table_formatter import (
     add_column_with_ellipsis,
     create_table,
     sort_items,
 )
+from confl.utils.page_helpers import extract_page_id
 
 app = typer.Typer(help="Manage pages")
 console = Console()
 err_console = Console(stderr=True)
-
-
-def _extract_page_id(ref: str) -> str:
-    """Extract page ID from a reference (ID or URL).
-
-    Args:
-        ref: Page reference - either a numeric ID or Confluence URL
-
-    Returns:
-        Page ID as string
-
-    Raises:
-        ValueError: If the reference is invalid
-    """
-    # If it's just a number, return it
-    if ref.isdigit():
-        return ref
-
-    # Try to extract from URL
-    # URL patterns:
-    # https://company.atlassian.net/wiki/spaces/KEY/pages/12345678/Title
-    # https://company.atlassian.net/wiki/spaces/KEY/pages/12345678
-    match = re.search(r"/pages/(\d+)", ref)
-    if match:
-        return match.group(1)
-
-    raise ValueError(
-        f"Invalid page reference: {ref!r}\n\n"
-        "Page references must be either:\n"
-        "  • A numeric page ID (e.g., 12345678)\n"
-        "  • A full Confluence page URL\n\n"
-        "Examples:\n"
-        "  confl page get 12345678\n"
-        '  confl page get "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678"\n\n'
-        "Tip: Use 'confl search <query>' to find page IDs"
-    )
-
-
-def _format_page_metadata(page: dict[str, Any]) -> str:
-    """Format page metadata as a header.
-
-    Args:
-        page: Page data from API
-
-    Returns:
-        Formatted metadata string
-    """
-    lines = []
-    lines.append(f"Title: {page.get('title', 'Untitled')}")
-
-    # Space key
-    if "spaceId" in page:
-        # TODO: For now just show the space ID, later we can resolve to key
-        lines.append(f"Space: {page['spaceId']}")
-
-    # Author (from version history)
-    version = page.get("version", {})
-    if "authorId" in version:
-        lines.append(f"Author: {version['authorId']}")
-
-    # Updated timestamp
-    if "createdAt" in version:
-        timestamp = version["createdAt"]
-        relative_time = format_relative_time(timestamp)
-        lines.append(f"Updated: {relative_time}")
-
-    lines.append("---")
-    return "\n".join(lines)
-
-
-def _get_page_content(page: dict[str, Any], format_type: str = "storage") -> str:
-    """Extract page content in the specified format.
-
-    Args:
-        page: Page data from API
-        format_type: Content format ("storage" or "atlas_doc_format")
-
-    Returns:
-        Page content as string
-    """
-    body = page.get("body", {})
-    format_data = body.get(format_type, {})
-    value = format_data.get("value", "")
-    return str(value)
-
-
-def _strip_markdown(markdown_text: str) -> str:
-    """Strip markdown formatting to produce plain text.
-
-    Args:
-        markdown_text: Markdown formatted text
-
-    Returns:
-        Plain text with markdown syntax removed
-    """
-    text = markdown_text
-
-    # Remove code blocks (```...```)
-    text = re.sub(r"```[\s\S]*?```", "", text)
-
-    # Remove inline code (`...`)
-    text = re.sub(r"`([^`]+)`", r"\1", text)
-
-    # Remove bold/italic (**text**, *text*, __text__, _text_)
-    text = re.sub(r"\*\*([^\*]+)\*\*", r"\1", text)
-    text = re.sub(r"__([^_]+)__", r"\1", text)
-    text = re.sub(r"\*([^\*]+)\*", r"\1", text)
-    text = re.sub(r"_([^_]+)_", r"\1", text)
-
-    # Remove links [text](url) -> text
-    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
-
-    # Remove images ![alt](url)
-    text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)
-
-    # Remove headers (#, ##, ###, etc.)
-    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
-
-    # Remove blockquotes (>)
-    text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)
-
-    # Remove horizontal rules (---, ***, ___)
-    text = re.sub(r"^(\*{3,}|-{3,}|_{3,})$", "", text, flags=re.MULTILINE)
-
-    # Remove list markers (-, *, +, 1.)
-    text = re.sub(r"^[\s]*[-\*\+]\s+", "", text, flags=re.MULTILINE)
-    text = re.sub(r"^[\s]*\d+\.\s+", "", text, flags=re.MULTILINE)
-
-    # Clean up extra whitespace
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    text = text.strip()
-
-    return text
 
 
 @app.command("get")
@@ -181,7 +51,7 @@ def get_page(
         confl page get 12345678 --body-only
     """
     try:
-        page_id = _extract_page_id(ref)
+        page_id = extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -213,32 +83,32 @@ def get_page(
     if json_output:
         print(json.dumps(page, indent=2))
     elif raw:
-        content = _get_page_content(page, "storage")
+        content = get_page_content(page, "storage")
         if not body_only:
-            console.print(_format_page_metadata(page))
+            console.print(format_page_metadata(page))
         print(content)
     elif markdown:
         # Output raw markdown (converted from storage)
-        content = _get_page_content(page, "storage")
+        content = get_page_content(page, "storage")
         markdown_content = storage_to_markdown(content)
         if not body_only:
-            console.print(_format_page_metadata(page))
+            console.print(format_page_metadata(page))
         print(markdown_content)
     elif plain:
         # Output plain text (converted from storage, stripped of markdown)
-        content = _get_page_content(page, "storage")
+        content = get_page_content(page, "storage")
         markdown_content = storage_to_markdown(content)
-        plain_content = _strip_markdown(markdown_content)
+        plain_content = strip_markdown(markdown_content)
         if not body_only:
-            console.print(_format_page_metadata(page))
+            console.print(format_page_metadata(page))
         print(plain_content)
     else:
         # Default: Rich terminal output with Markdown rendering
         if not body_only:
-            console.print(_format_page_metadata(page))
+            console.print(format_page_metadata(page))
 
         # Get storage content and convert to Markdown
-        content = _get_page_content(page, "storage")
+        content = get_page_content(page, "storage")
         markdown_content = storage_to_markdown(content)
 
         # Render with Rich's Markdown renderer
@@ -329,7 +199,7 @@ def delete_page(
         confl page delete 12345678 --dry-run
     """
     try:
-        page_id = _extract_page_id(ref)
+        page_id = extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -552,7 +422,7 @@ def update_page(
     """
     # Extract page ID
     try:
-        page_id = _extract_page_id(ref)
+        page_id = extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -641,7 +511,7 @@ def update_page(
         storage_content = content if raw else markdown_to_storage(content)
     else:
         # No new content provided, keep existing
-        storage_content = _get_page_content(current_page, "storage")
+        storage_content = get_page_content(current_page, "storage")
 
     # Update the page
     try:
@@ -702,7 +572,7 @@ def versions_command(
     """
     # Extract page ID
     try:
-        page_id = _extract_page_id(ref)
+        page_id = extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -776,7 +646,7 @@ def version_command(
     """
     # Extract page ID
     try:
-        page_id = _extract_page_id(ref)
+        page_id = extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -817,7 +687,7 @@ def version_command(
         console.print("---\n")
 
         # Get content
-        content = _get_page_content(version_data, format_type="storage")
+        content = get_page_content(version_data, format_type="storage")
 
         if markdown:
             # Convert to markdown
@@ -856,7 +726,7 @@ def restore_command(
     """
     # Extract page ID
     try:
-        page_id = _extract_page_id(ref)
+        page_id = extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
@@ -881,7 +751,7 @@ def restore_command(
         sys.exit(1)
 
     # Extract content from version
-    content = _get_page_content(version_data, format_type="storage")
+    content = get_page_content(version_data, format_type="storage")
 
     # Generate message if not provided
     if not message:

@@ -5,9 +5,9 @@ from httpx import Response
 from typer.testing import CliRunner
 
 from confl.client import ApiError, handle_api_error
-from confl.commands.blogpost import _extract_blogpost_id
-from confl.commands.page import _extract_page_id
 from confl.config import ConfigError, _validate_and_create_config
+from confl.utils.blogpost_helpers import extract_blogpost_id
+from confl.utils.page_helpers import extract_page_id
 
 runner = CliRunner()
 
@@ -131,7 +131,7 @@ class TestPageReferenceErrorMessages:
     def test_invalid_page_reference_error_message(self):
         """Invalid page reference should include format examples."""
         with pytest.raises(ValueError) as exc_info:
-            _extract_page_id("invalid-ref")
+            extract_page_id("invalid-ref")
 
         error_msg = str(exc_info.value)
         assert "Invalid page reference" in error_msg
@@ -142,12 +142,12 @@ class TestPageReferenceErrorMessages:
 
     def test_valid_numeric_id(self):
         """Valid numeric ID should work."""
-        assert _extract_page_id("12345678") == "12345678"
+        assert extract_page_id("12345678") == "12345678"
 
     def test_valid_url(self):
         """Valid URL should extract ID."""
         url = "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678/Title"
-        assert _extract_page_id(url) == "12345678"
+        assert extract_page_id(url) == "12345678"
 
 
 class TestBlogpostReferenceErrorMessages:
@@ -156,7 +156,7 @@ class TestBlogpostReferenceErrorMessages:
     def test_invalid_blogpost_reference_error_message(self):
         """Invalid blogpost reference should include format examples."""
         with pytest.raises(ValueError) as exc_info:
-            _extract_blogpost_id("invalid-ref")
+            extract_blogpost_id("invalid-ref")
 
         error_msg = str(exc_info.value)
         assert "Invalid blog post reference" in error_msg
@@ -167,9 +167,9 @@ class TestBlogpostReferenceErrorMessages:
 
     def test_valid_blogpost_numeric_id(self):
         """Valid numeric ID should work."""
-        assert _extract_blogpost_id("12345678") == "12345678"
+        assert extract_blogpost_id("12345678") == "12345678"
 
     def test_valid_blogpost_url(self):
         """Valid URL should extract ID."""
         url = "https://company.atlassian.net/wiki/spaces/DEV/blogposts/12345678/Title"
-        assert _extract_blogpost_id(url) == "12345678"
+        assert extract_blogpost_id(url) == "12345678"
