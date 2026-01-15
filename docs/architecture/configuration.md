@@ -16,7 +16,38 @@ confl auth status             # Show current auth state
 confl auth logout             # Clear stored credentials
 ```
 
-Credentials stored in `~/.config/confl/credentials.toml`.
+Credentials stored in `~/.config/confl/credentials.toml` with file permissions set to `0o600` (owner read/write only).
+
+### Security
+
+**Current Approach:**
+- Credentials stored in `~/.config/confl/credentials.toml`
+- File permissions: `0o600` (owner read/write only)
+- Secure for single-user development environments
+- Standard practice for CLI developer tools
+
+**Future Enhancement: OS Keychain Integration**
+
+For additional security, confl could integrate with operating system keychains:
+
+- **macOS**: Keychain Access (`security` command)
+- **Windows**: Credential Manager (Windows Credential Store)
+- **Linux**: Secret Service API (GNOME Keyring, KWallet)
+
+Benefits:
+- Encrypted credential storage managed by OS
+- Integration with system security policies
+- Credentials never written as plain text to disk
+
+Implementation Considerations:
+- Python library: [`keyring`](https://pypi.org/project/keyring/) provides cross-platform abstraction
+- Effort: High (requires OS-specific testing and fallback handling)
+- Trade-off: Added dependency and complexity vs. marginal security benefit
+- Current file-based approach is acceptable and secure for developer tool use case
+
+**Priority:** P3 - Future enhancement, not a security concern
+
+**Reference:** [Senior Review Findings](senior-review-findings.md) - Finding 6.1
 
 ### For automation (CI, agents)
 
