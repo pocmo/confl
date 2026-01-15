@@ -261,20 +261,31 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         # Handle expand macro (collapsible content)
         if macro_name == "expand":
             # Extract title parameter
-            title = "Details"
+            expand_title: str | None = None
             for param in el.find_all("ac:parameter"):
                 param_name = param.get("ac:name")
                 if param_name == "title":
-                    title = param.get_text().strip()
+                    expand_title = param.get_text().strip()
                     break
 
             # Extract rich-text-body content
             rich_body = el.find("ac:rich-text-body")
             if rich_body is not None:
+                # If no explicit title, try to extract from first paragraph
+                if expand_title is None:
+                    first_p = rich_body.find("p")
+                    if first_p is not None:
+                        # Use first paragraph as title
+                        expand_title = first_p.get_text().strip()
+                        # Remove the first paragraph from the body
+                        first_p.decompose()
+                    else:
+                        expand_title = "Details"
+
                 inner_md = self.process_tag(rich_body, **options)  # type: ignore[attr-defined]
                 # Convert to details/summary HTML (supported in many Markdown renderers)
                 return (
-                    f"<details>\n<summary>{title}</summary>\n\n{inner_md.strip()}\n</details>\n\n"
+                    f"<details>\n<summary>{expand_title}</summary>\n\n{inner_md.strip()}\n</details>\n\n"
                 )
 
         # Handle table of contents macro

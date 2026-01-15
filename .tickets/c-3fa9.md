@@ -1,6 +1,6 @@
 ---
 id: c-3fa9
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T21:58:52Z
@@ -33,3 +33,9 @@ Implementation:
 - Wrap in details/summary tags
 - Fall back to heading if no title parameter
 
+
+## Notes
+
+**2026-01-15T05:01:02Z**
+
+Completed: Enhanced expand macro rendering to extract first paragraph as title when no explicit title parameter provided. Improves FAQ and accordion sections. Added comprehensive tests for all scenarios.

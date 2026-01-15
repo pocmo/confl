@@ -688,20 +688,37 @@ class TestExpandMacro:
         assert "Hidden content" in result
         assert "</details>" in result
 
-    def test_expand_without_title(self) -> None:
+    def test_expand_without_title_extracts_first_paragraph(self) -> None:
         from confl.converter import storage_to_markdown
 
         storage = """
         <ac:structured-macro ac:name="expand" ac:schema-version="1">
             <ac:rich-text-body>
-                <p>Hidden content.</p>
+                <p>This is the question?</p>
+                <p>This is the answer.</p>
             </ac:rich-text-body>
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
         assert "<details>" in result
-        assert "<summary>Details</summary>" in result  # Default title
-        assert "Hidden content" in result
+        assert "<summary>This is the question?</summary>" in result  # First paragraph as title
+        assert "This is the answer" in result
+        assert "This is the question?" not in result.split("</summary>")[1]  # Not repeated in body
+
+    def test_expand_without_title_or_paragraphs(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="expand" ac:schema-version="1">
+            <ac:rich-text-body>
+                <ul><li>Item 1</li></ul>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "<details>" in result
+        assert "<summary>Details</summary>" in result  # Fallback to default
+        assert "Item 1" in result
 
 
 class TestTOCMacro:
