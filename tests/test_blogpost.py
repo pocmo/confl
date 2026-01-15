@@ -528,3 +528,19 @@ class TestBlogpostDeleteCommand:
 
         assert result.exit_code == 0
         assert "deleted successfully" in result.stdout
+
+    def test_delete_blogpost_with_yes_flag(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test deleting a blog post with --yes flag bypasses confirmation."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/blogposts/654321",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["blogpost", "delete", "654321", "--yes"])
+        assert result.exit_code == 0
+        assert "deleted successfully" in result.stdout
+        # Should not contain confirmation prompt
+        assert "Are you sure" not in result.stdout

@@ -1,14 +1,13 @@
 """Tests for enhanced error messages."""
 
 import pytest
+from httpx import Response
 from typer.testing import CliRunner
 
-from confl.cli import app
 from confl.client import ApiError, handle_api_error
-from confl.config import ConfigError, _validate_and_create_config
-from confl.commands.page import _extract_page_id
 from confl.commands.blogpost import _extract_blogpost_id
-from httpx import Response
+from confl.commands.page import _extract_page_id
+from confl.config import ConfigError, _validate_and_create_config
 
 runner = CliRunner()
 
@@ -22,10 +21,10 @@ class TestApiErrorMessages:
             status_code=401,
             json={"errors": [{"title": "Unauthorized", "detail": "Invalid credentials"}]},
         )
-        
+
         with pytest.raises(ApiError) as exc_info:
             handle_api_error(response)
-        
+
         error_msg = str(exc_info.value)
         assert "Authentication failed" in error_msg
         assert "confl auth status" in error_msg
@@ -38,10 +37,10 @@ class TestApiErrorMessages:
             status_code=403,
             json={"errors": [{"title": "Forbidden", "detail": "Access denied"}]},
         )
-        
+
         with pytest.raises(ApiError) as exc_info:
             handle_api_error(response)
-        
+
         error_msg = str(exc_info.value)
         assert "Permission denied" in error_msg
         assert "permission to access" in error_msg
@@ -53,10 +52,10 @@ class TestApiErrorMessages:
             status_code=404,
             json={"errors": [{"title": "Not Found", "detail": "Page not found"}]},
         )
-        
+
         with pytest.raises(ApiError) as exc_info:
             handle_api_error(response)
-        
+
         error_msg = str(exc_info.value)
         assert "Not found" in error_msg
         assert "deleted or moved" in error_msg
@@ -68,10 +67,10 @@ class TestApiErrorMessages:
             status_code=409,
             json={"errors": [{"title": "Conflict", "detail": "Version mismatch"}]},
         )
-        
+
         with pytest.raises(ApiError) as exc_info:
             handle_api_error(response)
-        
+
         error_msg = str(exc_info.value)
         assert "Version conflict" in error_msg
         assert "Fetch the latest version" in error_msg
@@ -83,10 +82,10 @@ class TestApiErrorMessages:
             status_code=429,
             json={"errors": [{"title": "Rate Limit", "detail": "Too many requests"}]},
         )
-        
+
         with pytest.raises(ApiError) as exc_info:
             handle_api_error(response)
-        
+
         error_msg = str(exc_info.value)
         assert "Rate limit exceeded" in error_msg
         assert "Wait 60 seconds" in error_msg
@@ -100,7 +99,7 @@ class TestConfigErrorMessages:
         """Invalid site should include format examples."""
         with pytest.raises(ConfigError) as exc_info:
             _validate_and_create_config("https://site.com", "user@example.com", "token")
-        
+
         error_msg = str(exc_info.value)
         assert "Invalid site" in error_msg
         assert "mycompany.atlassian.net" in error_msg
@@ -110,7 +109,7 @@ class TestConfigErrorMessages:
         """Invalid email should include format example."""
         with pytest.raises(ConfigError) as exc_info:
             _validate_and_create_config("site.atlassian.net", "invalid-email", "token")
-        
+
         error_msg = str(exc_info.value)
         assert "Invalid email" in error_msg
         assert "user@example.com" in error_msg
@@ -119,7 +118,7 @@ class TestConfigErrorMessages:
         """Empty token should include creation instructions."""
         with pytest.raises(ConfigError) as exc_info:
             _validate_and_create_config("site.atlassian.net", "user@example.com", "")
-        
+
         error_msg = str(exc_info.value)
         assert "API token cannot be empty" in error_msg
         assert "api-tokens" in error_msg
@@ -133,7 +132,7 @@ class TestPageReferenceErrorMessages:
         """Invalid page reference should include format examples."""
         with pytest.raises(ValueError) as exc_info:
             _extract_page_id("invalid-ref")
-        
+
         error_msg = str(exc_info.value)
         assert "Invalid page reference" in error_msg
         assert "numeric page ID" in error_msg
@@ -158,7 +157,7 @@ class TestBlogpostReferenceErrorMessages:
         """Invalid blogpost reference should include format examples."""
         with pytest.raises(ValueError) as exc_info:
             _extract_blogpost_id("invalid-ref")
-        
+
         error_msg = str(exc_info.value)
         assert "Invalid blog post reference" in error_msg
         assert "numeric blog post ID" in error_msg

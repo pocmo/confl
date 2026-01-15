@@ -334,3 +334,19 @@ class TestCommentDeleteCommand:
         data = json.loads(result.stdout)
         assert data["success"] is True
         assert data["id"] == "789012"
+
+    def test_delete_comment_with_yes_flag(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test deleting a comment with --yes flag bypasses confirmation."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/footer-comments/789012",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["comment", "delete", "789012", "--yes"])
+        assert result.exit_code == 0
+        assert "Deleted comment" in result.stdout
+        # Should not contain confirmation prompt
+        assert "Are you sure" not in result.stdout

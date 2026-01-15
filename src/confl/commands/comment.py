@@ -371,6 +371,7 @@ def delete_comment(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would be done without making changes"
     ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
     """Delete a comment.
 
@@ -387,6 +388,12 @@ def delete_comment(
         else:
             console.print(f"[yellow]DRY RUN:[/yellow] Would delete comment {comment_id}")
         return
+
+    # Confirmation prompt (skip if --yes or not a TTY)
+    if not yes and sys.stdin.isatty() and not json_output:
+        if not typer.confirm(f"Are you sure you want to delete comment {comment_id}?"):
+            console.print("[yellow]Cancelled[/yellow]")
+            return
 
     try:
         client = get_client()

@@ -660,6 +660,20 @@ class TestPageDeleteCommand:
         assert result.exit_code == 2
         assert "Invalid page reference" in result.stderr
 
+    def test_delete_page_with_yes_flag(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test deleting a page with --yes flag bypasses confirmation."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["page", "delete", "12345678", "--yes"])
+        assert result.exit_code == 0
+        assert "deleted successfully" in result.stdout
+        # Should not contain confirmation prompt
+        assert "Are you sure" not in result.stdout
+
 
 class TestPageUpdateCommand:
     """Tests for 'confl page update' command."""

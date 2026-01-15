@@ -325,6 +325,7 @@ def delete_blogpost(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would be done without making changes"
     ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
     """Delete a blog post.
 
@@ -348,6 +349,12 @@ def delete_blogpost(
         else:
             console.print(f"[yellow]DRY RUN:[/yellow] Would delete blog post {blogpost_id}")
         return
+
+    # Confirmation prompt (skip if --yes or not a TTY)
+    if not yes and sys.stdin.isatty() and not json_output:
+        if not typer.confirm(f"Are you sure you want to delete blog post {blogpost_id}?"):
+            console.print("[yellow]Cancelled[/yellow]")
+            return
 
     # Delete the blog post
     try:

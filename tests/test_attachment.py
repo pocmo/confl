@@ -444,6 +444,22 @@ class TestAttachmentDeleteCommand:
         assert output["success"] is True
         assert output["id"] == "att123"
 
+    def test_delete_attachment_with_yes_flag(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test deleting an attachment with --yes flag bypasses confirmation."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/attachments/att123",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["attachment", "delete", "att123", "--yes"])
+        assert result.exit_code == 0
+        assert "Deleted attachment" in result.stdout
+        # Should not contain confirmation prompt
+        assert "Are you sure" not in result.stdout
+
 
 class TestPageIdExtraction:
     """Tests for page ID extraction from URLs."""

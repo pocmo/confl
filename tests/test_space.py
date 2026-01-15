@@ -443,3 +443,17 @@ class TestSpaceDeleteCommand:
         result = runner.invoke(app, ["space", "delete", "NOTFOUND"])
         assert result.exit_code == 0  # 404 is treated as success
         assert "Space deleted" in result.stdout
+
+    def test_delete_space_with_yes_flag(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test deleting a space with --yes flag bypasses confirmation."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["space", "delete", "DEV", "--yes"])
+        assert result.exit_code == 0
+        assert "Space deleted" in result.stdout
+        # Should not contain confirmation prompt
+        assert "Are you sure" not in result.stdout
