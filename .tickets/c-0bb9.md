@@ -1,6 +1,6 @@
 ---
 id: c-0bb9
-status: open
+status: closed
 deps: [c-89ee]
 links: []
 created: 2026-01-15T10:17:10Z
@@ -42,3 +42,7 @@ Users want to find a space when they know part of the name but don't know the sp
 - Should be case-insensitive and intuitive
 - Consider dependency on c-89ee if not completed
 
+
+**2026-01-15T11:33:00Z**
+
+Duplicate of c-b46a which has been completed. The space search command has been implemented with fuzzy CQL matching, type filter, limit option, and JSON output.
