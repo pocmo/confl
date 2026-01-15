@@ -1,5 +1,6 @@
 """Space commands."""
 
+import html
 import json
 import sys
 
@@ -251,6 +252,88 @@ def update_space(
         console.print(
             f"[green]✓[/green] Space updated: {space.get('key', '')} - {space.get('name', '')}"
         )
+
+
+@app.command("search")
+def search_spaces(
+    query: str = typer.Argument(..., help="Search query for space name"),
+    type_filter: str | None = typer.Option(
+        None, "--type", help="Filter by space type (global, personal)"
+    ),
+    limit: int = typer.Option(25, "--limit", help="Maximum number of results"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON array"),
+) -> None:
+    """Search for spaces by name.
+
+    Uses fuzzy matching to find spaces with names containing the search query.
+
+    Examples:
+        confl space search "Engineering"
+        confl space search "Dev" --type global
+        confl space search "My" --type personal --limit 10
+        confl space search "Team" --json
+    """
+    # Build CQL query for space search with fuzzy matching
+    cql = f'type=space AND title~"{query}"'
+
+    # Add type filter if specified
+    if type_filter:
+        if type_filter.lower() not in ["global", "personal"]:
+            err_console.print("[red]Error:[/red] --type must be 'global' or 'personal'")
+            sys.exit(2)
+        cql += f" AND space.type={type_filter.lower()}"
+
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+        results = confluence.search_content(cql, limit=limit)
+    except ApiError as e:
+        if json_output and e.response_data:
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Extract space information from search results
+    spaces = []
+    for result in results:
+        # v1 search API returns space info in result.space
+        space_data = result.get("space", {})
+        if space_data:
+            # Decode HTML entities in space name
+            space_info = {
+                "key": space_data.get("key", ""),
+                "name": html.unescape(space_data.get("name", "Unnamed")),
+                "type": space_data.get("type", ""),
+                "id": space_data.get("id", ""),
+            }
+            spaces.append(space_info)
+
+    # Output based on flags
+    if json_output:
+        print(json.dumps(spaces, indent=2))
+    else:
+        # Rich table output
+        table = create_table()
+        add_column_with_ellipsis(table, "Key", style="dim")
+        add_column_with_ellipsis(table, "Name", max_width=50)
+        add_column_with_ellipsis(table, "Type")
+        add_column_with_ellipsis(table, "ID", style="dim")
+
+        for space in spaces:
+            table.add_row(
+                space["key"],
+                space["name"],
+                space["type"],
+                space["id"],
+            )
+
+        console.print(table)
+
+        if not spaces:
+            console.print("[yellow]No spaces found matching your query.[/yellow]")
+        else:
+            console.print(f"\n[dim]Found {len(spaces)} space(s)[/dim]")
 
 
 @app.command("delete")

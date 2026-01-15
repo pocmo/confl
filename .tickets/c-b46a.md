@@ -1,6 +1,6 @@
 ---
 id: c-b46a
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T11:28:46Z
@@ -46,3 +46,9 @@ confl space search "Engineering"
 - Add to README.md examples
 - Update docs/architecture/cli-subcommands.md
 
+
+## Notes
+
+**2026-01-15T11:32:18Z**
+
+Completed: Implemented confl space search command with fuzzy CQL matching, type filter, limit option, JSON output, and HTML entity decoding. Added 7 comprehensive tests.

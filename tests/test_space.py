@@ -632,3 +632,161 @@ class TestSpaceDeleteCommand:
         assert "Space deleted" in result.stdout
         # Should not contain confirmation prompt
         assert "Are you sure" not in result.stdout
+
+
+class TestSpaceSearchCommand:
+    """Tests for 'confl space search' command."""
+
+    def test_search_spaces_basic(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test basic space search."""
+        search_results = {
+            "results": [
+                {
+                    "space": {
+                        "id": "123",
+                        "key": "DEV",
+                        "name": "Development",
+                        "type": "global",
+                    }
+                },
+                {
+                    "space": {
+                        "id": "456",
+                        "key": "DEVOPS",
+                        "name": "DevOps Team",
+                        "type": "global",
+                    }
+                },
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/rest/api/search?cql=type%3Dspace+AND+title%7E%22Dev%22&limit=25",
+            method="GET",
+            json=search_results,
+        )
+
+        result = runner.invoke(app, ["space", "search", "Dev"])
+        assert result.exit_code == 0
+        assert "DEV" in result.stdout
+        assert "Development" in result.stdout
+        assert "DEVOPS" in result.stdout
+        assert "DevOps Team" in result.stdout
+        assert "Found 2 space(s)" in result.stdout
+
+    def test_search_spaces_with_type_filter(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test space search with type filter."""
+        search_results = {
+            "results": [
+                {
+                    "space": {
+                        "id": "123",
+                        "key": "~user123",
+                        "name": "Personal Space",
+                        "type": "personal",
+                    }
+                }
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/rest/api/search?cql=type%3Dspace+AND+title%7E%22Personal%22+AND+space.type%3Dpersonal&limit=25",
+            method="GET",
+            json=search_results,
+        )
+
+        result = runner.invoke(app, ["space", "search", "Personal", "--type", "personal"])
+        assert result.exit_code == 0
+        assert "~user123" in result.stdout
+        assert "Personal Space" in result.stdout
+
+    def test_search_spaces_with_invalid_type(self, mock_config_env: None) -> None:
+        """Test space search with invalid type filter."""
+        result = runner.invoke(app, ["space", "search", "Test", "--type", "invalid"])
+        assert result.exit_code == 2
+        assert "must be 'global' or 'personal'" in result.stderr
+
+    def test_search_spaces_with_limit(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test space search with custom limit."""
+        search_results = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/rest/api/search?cql=type%3Dspace+AND+title%7E%22Test%22&limit=10",
+            method="GET",
+            json=search_results,
+        )
+
+        result = runner.invoke(app, ["space", "search", "Test", "--limit", "10"])
+        assert result.exit_code == 0
+
+    def test_search_spaces_json_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test space search with JSON output."""
+        search_results = {
+            "results": [
+                {
+                    "space": {
+                        "id": "123",
+                        "key": "DEV",
+                        "name": "Development",
+                        "type": "global",
+                    }
+                }
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/rest/api/search?cql=type%3Dspace+AND+title%7E%22Dev%22&limit=25",
+            method="GET",
+            json=search_results,
+        )
+
+        result = runner.invoke(app, ["space", "search", "Dev", "--json"])
+        assert result.exit_code == 0
+        output = json.loads(result.stdout)
+        assert len(output) == 1
+        assert output[0]["key"] == "DEV"
+        assert output[0]["name"] == "Development"
+        assert output[0]["type"] == "global"
+        assert output[0]["id"] == "123"
+
+    def test_search_spaces_no_results(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test space search with no results."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/rest/api/search?cql=type%3Dspace+AND+title%7E%22NonExistent%22&limit=25",
+            method="GET",
+            json={"results": []},
+        )
+
+        result = runner.invoke(app, ["space", "search", "NonExistent"])
+        assert result.exit_code == 0
+        assert "No spaces found matching your query" in result.stdout
+
+    def test_search_spaces_decodes_html_entities(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test that space search decodes HTML entities in space names."""
+        search_results = {
+            "results": [
+                {
+                    "space": {
+                        "id": "123",
+                        "key": "TEST",
+                        "name": "Test &amp; Development",
+                        "type": "global",
+                    }
+                }
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/rest/api/search?cql=type%3Dspace+AND+title%7E%22Test%22&limit=25",
+            method="GET",
+            json=search_results,
+        )
+
+        result = runner.invoke(app, ["space", "search", "Test"])
+        assert result.exit_code == 0
+        assert "Test & Development" in result.stdout
+        assert "&amp;" not in result.stdout
