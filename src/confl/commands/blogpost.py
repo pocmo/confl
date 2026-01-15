@@ -185,10 +185,10 @@ def list_blogposts(
 
             table.add_row(blogpost_id, title, space_id, published)
 
-        console.print(table)
-
         if not blogposts:
             console.print("[yellow]No blog posts found in this space.[/yellow]")
+        else:
+            console.print(table)
 
 
 @app.command("delete")

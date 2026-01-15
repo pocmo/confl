@@ -137,28 +137,28 @@ def list_spaces(
     if json_output:
         print(json.dumps(spaces, indent=2))
     else:
-        # Rich table output with enhanced formatting
-        table = create_table()
-        add_column_with_ellipsis(table, "Key", style="dim")
-        add_column_with_ellipsis(table, "Name", max_width=50)
-        add_column_with_ellipsis(table, "Type")
-        add_column_with_ellipsis(table, "Status")
-
-        for space in spaces:
-            key = space.get("key", "")
-            name = space.get("name", "Unnamed")
-            space_type = space.get("type", "")
-            status = space.get("status", "")
-
-            # Apply color coding to status
-            status_formatted = colorize_status(status)
-
-            table.add_row(key, name, space_type, status_formatted)
-
-        console.print(table)
-
         if not spaces:
             console.print("[yellow]No spaces found.[/yellow]")
+        else:
+            # Rich table output with enhanced formatting
+            table = create_table()
+            add_column_with_ellipsis(table, "Key", style="dim")
+            add_column_with_ellipsis(table, "Name", max_width=50)
+            add_column_with_ellipsis(table, "Type")
+            add_column_with_ellipsis(table, "Status")
+
+            for space in spaces:
+                key = space.get("key", "")
+                name = space.get("name", "Unnamed")
+                space_type = space.get("type", "")
+                status = space.get("status", "")
+
+                # Apply color coding to status
+                status_formatted = colorize_status(status)
+
+                table.add_row(key, name, space_type, status_formatted)
+
+            console.print(table)
 
 
 @app.command("get")
@@ -379,26 +379,25 @@ def search_spaces(
     if json_output:
         print(json.dumps(spaces, indent=2))
     else:
-        # Rich table output
-        table = create_table()
-        add_column_with_ellipsis(table, "Key", style="dim")
-        add_column_with_ellipsis(table, "Name", max_width=50)
-        add_column_with_ellipsis(table, "Type")
-        add_column_with_ellipsis(table, "ID", style="dim")
-
-        for space in spaces:
-            table.add_row(
-                space["key"],
-                space["name"],
-                space["type"],
-                space["id"],
-            )
-
-        console.print(table)
-
         if not spaces:
             console.print("[yellow]No spaces found matching your query.[/yellow]")
         else:
+            # Rich table output
+            table = create_table()
+            add_column_with_ellipsis(table, "Key", style="dim")
+            add_column_with_ellipsis(table, "Name", max_width=50)
+            add_column_with_ellipsis(table, "Type")
+            add_column_with_ellipsis(table, "ID", style="dim")
+
+            for space in spaces:
+                table.add_row(
+                    space["key"],
+                    space["name"],
+                    space["type"],
+                    space["id"],
+                )
+
+            console.print(table)
             console.print(f"\n[dim]Found {len(spaces)} space(s)[/dim]")
 
 

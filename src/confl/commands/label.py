@@ -78,10 +78,10 @@ def list_labels(
             prefix = label.get("prefix", "")
             table.add_row(label_id, name, prefix)
 
-        console.print(table)
-
         if not labels:
             console.print("[yellow]No labels found on this page.[/yellow]")
+        else:
+            console.print(table)
 
 
 @app.command("add")

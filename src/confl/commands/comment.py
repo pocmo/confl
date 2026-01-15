@@ -130,10 +130,10 @@ def list_comments(
 
             table.add_row(comment_id, comment_type, body_preview, author_id, created_relative)
 
-        console.print(table)
-
         if not all_comments:
             console.print("[yellow]No comments found.[/yellow]")
+        else:
+            console.print(table)
 
 
 @app.command("get")

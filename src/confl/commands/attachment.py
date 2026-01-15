@@ -85,10 +85,10 @@ def list_attachments(
 
             table.add_row(att_id, title, media_type, size_str)
 
-        console.print(table)
-
         if not attachments:
             console.print("[yellow]No attachments found.[/yellow]")
+        else:
+            console.print(table)
 
 
 @app.command("get")

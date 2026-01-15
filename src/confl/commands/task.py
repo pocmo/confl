@@ -118,10 +118,10 @@ def list_tasks(
 
             table.add_row(task_id, status_display, body_preview, page_id, created_relative)
 
-        console.print(table)
-
         if not tasks:
             console.print("[yellow]No tasks found.[/yellow]")
+        else:
+            console.print(table)
 
 
 @app.command("get")

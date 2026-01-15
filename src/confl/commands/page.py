@@ -182,10 +182,10 @@ def list_pages(
 
             table.add_row(page_id, title, space_id, updated)
 
-        console.print(table)
-
         if not pages:
             console.print("[yellow]No pages found in this space.[/yellow]")
+        else:
+            console.print(table)
 
 
 @app.command("delete")

@@ -110,9 +110,8 @@ def search_command(
 
             table.add_row(content_type_val, content_id, title, space_key)
 
-        console.print(table)
-
         if not results:
             console.print("[yellow]No results found for your search.[/yellow]")
         else:
+            console.print(table)
             console.print(f"\n[dim]Found {len(results)} result(s)[/dim]")
