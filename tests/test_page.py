@@ -1761,9 +1761,7 @@ class TestPageRestoreCommand:
         assert result.exit_code == 0
         assert "restored" in result.stdout
 
-    def test_restore_version_dry_run(
-        self, httpx_mock: HTTPXMock, mock_config_env: None
-    ) -> None:
+    def test_restore_version_dry_run(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test restore dry run mode."""
         version_data = {
             "id": "12345678",
