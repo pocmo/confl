@@ -20,7 +20,12 @@ err_console = Console(stderr=True)
 
 # Define default option for labels to avoid B008 ruff error
 DEFAULT_LABELS_OPTION = typer.Option(
-    None, "--label", help="Filter by space label (can be specified multiple times)"
+    None,
+    "--label",
+    help=(
+        "Filter by space label/category (Confluence metadata, not name). "
+        "Can be specified multiple times."
+    ),
 )
 
 
@@ -66,6 +71,10 @@ def list_spaces(
     """List spaces.
 
     By default, fetches all spaces sorted by name. Use --limit to restrict results.
+
+    Note: To search spaces by name, use 'confl space search <query>' instead.
+    The --label filter is for Confluence space labels/categories (metadata tags),
+    not for space names.
 
     Examples:
         confl space list
