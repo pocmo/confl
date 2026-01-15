@@ -1607,13 +1607,23 @@ class ConfluenceClient:
     def get_current_user(self) -> dict[str, Any]:
         """Get the current authenticated user.
 
+        Note: Uses v1 API as v2 doesn't support user endpoints yet.
+
         Returns:
             User data including accountId, displayName, etc.
 
         Raises:
             ApiError: If the request fails
         """
-        response = self.client.get("/user/current")
+        # Build v1 API URL
+        # Client base is https://{site}/wiki/api/v2
+        # We need https://{site}/wiki/rest/api/user/current
+        base_url_str = str(self.client.base_url)
+        # Extract site URL (before /wiki)
+        site_url = base_url_str.split("/wiki/")[0]
+        user_url = f"{site_url}/wiki/rest/api/user/current"
+
+        response = self.client.get(user_url)
 
         if response.status_code != 200:
             handle_api_error(response)
