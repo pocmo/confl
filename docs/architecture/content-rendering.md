@@ -231,6 +231,62 @@ Storage format uses special tags for internal links:
 - Generate URL or show title only if URL not available
 - Example: `[Page Title](URL)` or just `Page Title` if no URL
 
+### Layout Handling
+
+Confluence storage format supports complex multi-column layouts using `<ac:layout>`, `<ac:layout-section>`, and `<ac:layout-cell>` tags:
+
+**Supported layout types:**
+- `ac:type="fixed-width"` - Standard width sections
+- `ac:type="two_equal"` - Two-column equal width
+- `ac:type="two_left"` / `ac:type="two_right"` - Two-column with emphasis
+- `ac:type="three_equal"` - Three-column equal width
+- `ac:type="single"` - Single column (default)
+
+**Layout attributes:**
+- `ac:breakout-mode` - Controls width: `default`, `wide`, `full-width`
+- `ac:breakout-width` - Explicit width value (e.g., `760`)
+
+**Example from real Confluence page:**
+```xml
+<ac:layout>
+  <ac:layout-section ac:type="three_equal" ac:breakout-mode="wide" ac:breakout-width="760">
+    <ac:layout-cell>
+      <ac:structured-macro ac:name="tip">...</ac:structured-macro>
+    </ac:layout-cell>
+    <ac:layout-cell>
+      <ac:structured-macro ac:name="info">...</ac:structured-macro>
+    </ac:layout-cell>
+    <ac:layout-cell>
+      <ac:structured-macro ac:name="note">...</ac:structured-macro>
+    </ac:layout-cell>
+  </ac:layout-section>
+</ac:layout>
+```
+
+**Current behavior:**
+- All layout content is **preserved**
+- Column structure is **flattened to sequential (top-to-bottom) content**
+- Layout metadata (`breakoutWidth`, `breakoutMode`, column types) is **ignored**
+- Content is processed left-to-right, then top-to-bottom through layout cells
+
+**Rationale:**
+- Markdown has no native column support
+- Plain text representation must be linear
+- Content preservation is prioritized over presentation
+- Terminal output is inherently single-column
+
+**Example conversion:**
+```
+Three-column layout with tip/info/note panels
+        ↓
+Sequential output:
+1. Tip panel content
+2. Info panel content  
+3. Note panel content
+```
+
+**Future consideration:** Could preserve layout hints as HTML comments or use markdown extensions for advanced viewers that support columns.
+
 ## Testing Strategy
 
 ### Unit Tests
