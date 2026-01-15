@@ -1120,7 +1120,7 @@ class TestUnknownMacros:
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        assert "[custom-panel]" in result
+        assert "[Macro: custom-panel]" in result
         assert "This is custom content." in result
 
     def test_unknown_macro_with_plain_text_body(self) -> None:
@@ -1133,11 +1133,11 @@ class TestUnknownMacros:
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        assert "[custom-macro]" in result
+        assert "[Macro: custom-macro]" in result
         assert "Plain text content here" in result
 
     def test_unknown_macro_with_parameters(self) -> None:
-        """Test unknown macro with only parameters."""
+        """Test unknown macro with only parameters uses simplified format."""
         from confl.converter import storage_to_markdown
 
         storage = """
@@ -1147,10 +1147,8 @@ class TestUnknownMacros:
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        assert "[custom-widget:" in result
-        # Should contain parameter info
-        assert "widgetId:" in result or "color:" in result
-        assert "widget-123" in result or "blue" in result
+        # Should use simplified format without parameter details
+        assert "[Macro: custom-widget]" in result
 
     def test_unknown_macro_with_nested_text(self) -> None:
         """Test unknown macro extracting nested text content."""
@@ -1162,9 +1160,8 @@ class TestUnknownMacros:
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        # Should not crash and should show some representation
-        assert "[anchor:" in result
-        assert "section-1" in result
+        # Should use simplified format
+        assert "[Macro: anchor]" in result
 
     def test_page_tree_macro(self) -> None:
         """Test page-tree macro (shows page hierarchy)."""
@@ -1176,9 +1173,8 @@ class TestUnknownMacros:
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        assert "[pagetree:" in result
-        # Should show placeholder since we can't generate actual tree
-        assert "root:" in result or "[pagetree]" in result
+        # Should use clean placeholder for pagetree
+        assert "[Page tree]" in result
 
     def test_unknown_macro_empty(self) -> None:
         """Test completely empty unknown macro."""
@@ -1189,8 +1185,8 @@ class TestUnknownMacros:
             'ac:schema-version="1"></ac:structured-macro>'
         )
         result = storage_to_markdown(storage)
-        # Should not crash and should show placeholder
-        assert "[empty-macro]" in result
+        # Should not crash and should show placeholder with new format
+        assert "[Macro: empty-macro]" in result
 
     def test_unknown_macro_no_crash(self) -> None:
         """Test that unknown macros never cause crashes."""
@@ -1232,9 +1228,86 @@ class TestUnknownMacros:
         </ac:structured-macro>
         """
         result = storage_to_markdown(storage)
-        assert "[include:" in result
         # Should show what page would be included
-        assert "Other Page Title" in result or "page:" in result
+        assert "[Include: Other Page Title]" in result
+
+    def test_include_macro_without_page(self) -> None:
+        """Test include macro without page parameter."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="include" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Include page]" in result
+
+    def test_excerpt_include_macro(self) -> None:
+        """Test excerpt-include macro."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="excerpt-include" ac:schema-version="1">
+            <ac:parameter ac:name="page">Source Page</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Excerpt from: Source Page]" in result
+
+    def test_recently_updated_macro(self) -> None:
+        """Test recently-updated macro."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="recently-updated" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Recently updated pages]" in result
+
+    def test_content_report_table_macro(self) -> None:
+        """Test content-report-table macro."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="content-report-table" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Content report]" in result
+
+    def test_livesearch_macro(self) -> None:
+        """Test livesearch macro."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="livesearch" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Live search]" in result
+
+    def test_page_properties_macro(self) -> None:
+        """Test page-properties macro."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="page-properties" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page properties]" in result
+
+    def test_page_properties_report_macro(self) -> None:
+        """Test page-properties-report macro."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="page-properties-report" ac:schema-version="1">
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "[Page properties]" in result
 
 
 class TestRoundTripConversion:

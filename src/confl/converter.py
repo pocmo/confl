@@ -387,11 +387,57 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             # Default placeholder
             return "[Page attachments]\n\n"
 
+        # Handle pagetree macro (hierarchical page navigation)
+        if macro_name == "pagetree":
+            return "[Page tree]\n\n"
+
+        # Handle recently-updated macro (shows recently modified pages)
+        if macro_name == "recently-updated":
+            return "[Recently updated pages]\n\n"
+
+        # Handle content-report-table macro (table of pages matching criteria)
+        if macro_name == "content-report-table":
+            return "[Content report]\n\n"
+
+        # Handle livesearch macro (search interface)
+        if macro_name == "livesearch":
+            return "[Live search]\n\n"
+
+        # Handle page-properties and page-properties-report macros
+        if macro_name in ("page-properties", "page-properties-report"):
+            return "[Page properties]\n\n"
+
+        # Handle include macro (includes content from another page)
+        if macro_name == "include":
+            # Try to show which page is being included
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                if param_name == "page":
+                    page_title = param.get_text().strip()
+                    if page_title:
+                        return f"[Include: {page_title}]\n\n"
+            return "[Include page]\n\n"
+
+        # Handle excerpt-include macro (includes excerpt from another page)
+        if macro_name == "excerpt-include":
+            # Try to show which page's excerpt is being included
+            for param in el.find_all("ac:parameter"):
+                param_name = param.get("ac:name")
+                if param_name == "page":
+                    page_title = param.get_text().strip()
+                    if page_title:
+                        return f"[Excerpt from: {page_title}]\n\n"
+            return "[Excerpt include]\n\n"
+
         # For unknown macros, handle gracefully
         return self._handle_unknown_macro(el, macro_name, text, **options)
 
     def _handle_unknown_macro(self, el: Tag, macro_name: str, text: str, **options: Any) -> str:
         """Handle unknown Confluence macros gracefully.
+
+        Uses a simplified format [Macro: name] to indicate unsupported macros
+        without cluttering output with parameters. Content from rich-text-body
+        or plain-text-body is still preserved when present.
 
         Args:
             el: The macro element
@@ -411,7 +457,7 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             if inner_md.strip():
                 # For macros with rich content, show a placeholder with content
                 logger.debug(f"Extracted rich-text-body from {macro_name} macro")
-                return f"[{macro_name}]\n\n{inner_md.strip()}\n\n"
+                return f"[Macro: {macro_name}]\n\n{inner_md.strip()}\n\n"
 
         # Try to extract from plain-text-body
         plain_body = el.find("ac:plain-text-body")
@@ -419,30 +465,12 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             plain_text = plain_body.get_text().strip()
             if plain_text:
                 logger.debug(f"Extracted plain-text-body from {macro_name} macro")
-                return f"[{macro_name}]\n\n{plain_text}\n\n"
+                return f"[Macro: {macro_name}]\n\n{plain_text}\n\n"
 
-        # Try to extract parameter values (for macros that just store data in params)
-        params = []
-        for param in el.find_all("ac:parameter"):
-            param_name = param.get("ac:name", "")
-            param_value = param.get_text().strip()
-            if param_value:
-                params.append(f"{param_name}: {param_value}")
-
-        if params:
-            logger.debug(f"Extracted parameters from {macro_name} macro")
-            param_str = ", ".join(params)
-            return f"[{macro_name}: {param_str}]\n\n"
-
-        # If there's any text content, use it
-        if text.strip():
-            logger.debug(f"Extracted text content from {macro_name} macro")
-            return text.strip() + "\n\n"
-
-        # Last resort: show placeholder for macro with no extractable content
-        # This prevents completely silent failures
-        logger.debug(f"No content extracted from {macro_name} macro, using placeholder")
-        return f"[{macro_name}]\n\n"
+        # For macros without rich-text or plain-text bodies, use simplified placeholder
+        # Don't show parameter values as they're configuration details, not content
+        logger.debug(f"No content body found for {macro_name} macro, using placeholder")
+        return f"[Macro: {macro_name}]\n\n"
 
     def convert_ac_link(self, el: Tag, text: str, **options: Any) -> str:
         """Convert Confluence page link to Markdown.
@@ -642,17 +670,24 @@ def storage_to_markdown(storage: str) -> str:
         - TOC macro → italic text placeholder
         - Jira macro → bracketed Jira issue keys or query
         - Excerpt macro → labeled content block
-        - Children macro → placeholder with parameters
+        - Children macro → placeholder
         - Attachments macro → placeholder with parameters
+        - Page tree macro → placeholder
+        - Recently updated macro → placeholder
+        - Content report macro → placeholder
+        - Live search macro → placeholder
+        - Page properties macros → placeholder
+        - Include/excerpt-include macros → placeholder with page reference
         - Page links (ac:link with ri:page) → bracketed text
         - User mentions (ri:user) → @username format
 
     Partial support:
-        - Unknown macros → text content or omitted
+        - Unknown macros → clean placeholder [Macro: name]
 
     Limitations:
         - Complex Confluence macros may not convert cleanly
         - Nested macros may lose formatting
+        - Navigation and dynamic content macros show placeholders only
 
     Example:
         >>> storage = "<h1>Hello</h1><p>This is <strong>bold</strong>.</p>"
