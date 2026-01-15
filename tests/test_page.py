@@ -1503,3 +1503,332 @@ class TestPageCreateCommand:
         )
         assert result.exit_code == 1
         assert "400" in result.stderr
+
+
+class TestPageVersionsCommand:
+    """Tests for 'confl page versions' command."""
+
+    def test_list_versions(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test listing page versions."""
+        versions_data = {
+            "results": [
+                {
+                    "number": 3,
+                    "authorId": "user123",
+                    "createdAt": "2024-01-15T10:30:00.000Z",
+                    "minorEdit": False,
+                    "message": "Major update",
+                },
+                {
+                    "number": 2,
+                    "authorId": "user456",
+                    "createdAt": "2024-01-14T09:00:00.000Z",
+                    "minorEdit": True,
+                    "message": "Fixed typo",
+                },
+                {
+                    "number": 1,
+                    "authorId": "user123",
+                    "createdAt": "2024-01-10T08:00:00.000Z",
+                    "minorEdit": False,
+                    "message": "Initial version",
+                },
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions?limit=25",
+            method="GET",
+            json=versions_data,
+        )
+
+        result = runner.invoke(app, ["page", "versions", "12345678"])
+        assert result.exit_code == 0
+        assert "3" in result.stdout
+        assert "user123" in result.stdout
+        assert "Major update" in result.stdout
+
+    def test_list_versions_json(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test listing page versions with JSON output."""
+        versions_data = {
+            "results": [
+                {
+                    "number": 1,
+                    "authorId": "user123",
+                    "createdAt": "2024-01-10T08:00:00.000Z",
+                    "minorEdit": False,
+                    "message": "Initial",
+                },
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions?limit=25",
+            method="GET",
+            json=versions_data,
+        )
+
+        result = runner.invoke(app, ["page", "versions", "12345678", "--json"])
+        assert result.exit_code == 0
+        output = json.loads(result.stdout)
+        assert len(output) == 1
+        assert output[0]["number"] == 1
+
+    def test_list_versions_empty(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test listing versions when none exist."""
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions?limit=25",
+            method="GET",
+            json={"results": []},
+        )
+
+        result = runner.invoke(app, ["page", "versions", "12345678"])
+        assert result.exit_code == 0
+        assert "No versions found" in result.stdout
+
+
+class TestPageVersionCommand:
+    """Tests for 'confl page version' command."""
+
+    def test_get_version(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test getting a specific version."""
+        version_data = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {
+                "number": 2,
+                "authorId": "user456",
+                "createdAt": "2024-01-14T09:00:00.000Z",
+                "message": "Updated content",
+            },
+            "body": {
+                "storage": {
+                    "value": "<p>Version 2 content</p>",
+                    "representation": "storage",
+                },
+            },
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions/2?body-format=storage",
+            method="GET",
+            json=version_data,
+        )
+
+        result = runner.invoke(app, ["page", "version", "12345678", "2"])
+        assert result.exit_code == 0
+        assert "Test Page" in result.stdout
+        assert "Version: 2" in result.stdout
+        assert "Version 2 content" in result.stdout
+
+    def test_get_version_markdown(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test getting a version with markdown conversion."""
+        version_data = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {
+                "number": 1,
+                "authorId": "user123",
+                "createdAt": "2024-01-10T08:00:00.000Z",
+                "message": "Initial",
+            },
+            "body": {
+                "storage": {
+                    "value": "<h1>Header</h1><p>Content</p>",
+                    "representation": "storage",
+                },
+            },
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions/1?body-format=storage",
+            method="GET",
+            json=version_data,
+        )
+
+        result = runner.invoke(app, ["page", "version", "12345678", "1", "--markdown"])
+        assert result.exit_code == 0
+        assert "Test Page" in result.stdout
+        assert "Header" in result.stdout
+
+    def test_get_version_json(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test getting a version with JSON output."""
+        version_data = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {"number": 1},
+            "body": {"storage": {"value": "<p>Content</p>"}},
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions/1?body-format=storage",
+            method="GET",
+            json=version_data,
+        )
+
+        result = runner.invoke(app, ["page", "version", "12345678", "1", "--json"])
+        assert result.exit_code == 0
+        output = json.loads(result.stdout)
+        assert output["id"] == "12345678"
+        assert output["version"]["number"] == 1
+
+
+class TestPageRestoreCommand:
+    """Tests for 'confl page restore' command."""
+
+    def test_restore_version(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test restoring a page to a previous version."""
+        # Get version to restore
+        version_data = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {"number": 2},
+            "body": {"storage": {"value": "<p>Version 2 content</p>"}},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions/2?body-format=storage",
+            method="GET",
+            json=version_data,
+        )
+
+        # Get current page for version number
+        current_page = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {"number": 5},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
+            method="GET",
+            json=current_page,
+        )
+
+        # Update page with old content
+        updated_page = {
+            "id": "12345678",
+            "version": {"number": 6},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="PUT",
+            json=updated_page,
+        )
+
+        result = runner.invoke(app, ["page", "restore", "12345678", "2"])
+        assert result.exit_code == 0
+        assert "restored to version 2" in result.stdout
+        assert "new version 6" in result.stdout
+
+    def test_restore_version_with_message(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test restoring with custom message."""
+        version_data = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {"number": 1},
+            "body": {"storage": {"value": "<p>Original</p>"}},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions/1?body-format=storage",
+            method="GET",
+            json=version_data,
+        )
+
+        current_page = {
+            "id": "12345678",
+            "version": {"number": 3},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
+            method="GET",
+            json=current_page,
+        )
+
+        updated_page = {
+            "id": "12345678",
+            "version": {"number": 4},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="PUT",
+            json=updated_page,
+        )
+
+        result = runner.invoke(
+            app, ["page", "restore", "12345678", "1", "--message", "Reverting bad change"]
+        )
+        assert result.exit_code == 0
+        assert "restored" in result.stdout
+
+    def test_restore_version_dry_run(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test restore dry run mode."""
+        version_data = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {"number": 2},
+            "body": {"storage": {"value": "<p>Content</p>"}},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions/2?body-format=storage",
+            method="GET",
+            json=version_data,
+        )
+
+        current_page = {
+            "id": "12345678",
+            "version": {"number": 4},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
+            method="GET",
+            json=current_page,
+        )
+
+        result = runner.invoke(app, ["page", "restore", "12345678", "2", "--dry-run"])
+        assert result.exit_code == 0
+        assert "DRY RUN" in result.stdout
+        assert "Current version: 4" in result.stdout
+        assert "Restore to version: 2" in result.stdout
+        assert "New version: 5" in result.stdout
+
+    def test_restore_version_json(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test restore with JSON output."""
+        version_data = {
+            "id": "12345678",
+            "title": "Test Page",
+            "version": {"number": 1},
+            "body": {"storage": {"value": "<p>Content</p>"}},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678/versions/1?body-format=storage",
+            method="GET",
+            json=version_data,
+        )
+
+        current_page = {
+            "id": "12345678",
+            "version": {"number": 2},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678?body-format=storage",
+            method="GET",
+            json=current_page,
+        )
+
+        updated_page = {
+            "id": "12345678",
+            "version": {"number": 3},
+        }
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/pages/12345678",
+            method="PUT",
+            json=updated_page,
+        )
+
+        result = runner.invoke(app, ["page", "restore", "12345678", "1", "--json"])
+        assert result.exit_code == 0
+        output = json.loads(result.stdout)
+        assert output["version"]["number"] == 3

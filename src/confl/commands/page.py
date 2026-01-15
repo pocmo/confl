@@ -679,3 +679,270 @@ def update_page(
         console.print(
             f"[green]✓[/green] Page {page_id} updated successfully (version {new_version})"
         )
+
+
+@app.command(name="versions")
+def versions_command(
+    ref: str = typer.Argument(help="Page ID or URL"),
+    limit: int = typer.Option(25, help="Maximum number of versions to return"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """List all versions of a page.
+
+    Shows version history with version number, author, timestamp, and message.
+    Versions are listed in reverse chronological order (newest first).
+
+    Examples:
+        confl page versions 12345678
+        confl page versions "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678"
+    """
+    # Extract page ID
+    try:
+        page_id = _extract_page_id(ref)
+    except ValueError as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(2)
+
+    # Fetch versions
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+        versions = confluence.list_page_versions(page_id, limit=limit)
+    except ApiError as e:
+        if json_output and e.response_data:
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Output
+    if json_output:
+        print(json.dumps(versions, indent=2))
+    else:
+        if not versions:
+            console.print("[yellow]No versions found[/yellow]")
+            return
+
+        # Create table
+        table = create_table()
+        add_column_with_ellipsis(table, "Version", style="bold")
+        add_column_with_ellipsis(table, "Author", max_width=30)
+        add_column_with_ellipsis(table, "Created", max_width=20)
+        add_column_with_ellipsis(table, "Minor", max_width=5)
+        add_column_with_ellipsis(table, "Message", max_width=50)
+
+        # Add rows
+        for version in versions:
+            version_num = str(version.get("number", ""))
+            author_id = version.get("authorId", "")
+            created_at = version.get("createdAt", "")
+            minor_edit = "✓" if version.get("minorEdit", False) else ""
+            message = version.get("message", "")
+
+            # Format timestamp
+            timestamp = format_relative_time(created_at) if created_at else ""
+
+            # Truncate message
+            if len(message) > 50:
+                message = message[:47] + "..."
+
+            table.add_row(version_num, author_id, timestamp, minor_edit, message)
+
+        console.print(table)
+        console.print(f"\n[dim]Showing {len(versions)} version(s)[/dim]")
+
+
+@app.command(name="version")
+def version_command(
+    ref: str = typer.Argument(help="Page ID or URL"),
+    version_number: int = typer.Argument(help="Version number to retrieve"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    markdown: bool = typer.Option(
+        False, "--markdown", "-m", help="Output content as Markdown instead of storage format"
+    ),
+) -> None:
+    """Get a specific version of a page.
+
+    Retrieves the page content from a historical version. By default, shows the
+    raw storage format (XHTML). Use --markdown to convert to Markdown.
+
+    Examples:
+        confl page version 12345678 5
+        confl page version 12345678 3 --markdown
+    """
+    # Extract page ID
+    try:
+        page_id = _extract_page_id(ref)
+    except ValueError as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(2)
+
+    # Fetch version
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+        version_data = confluence.get_page_version(page_id, version_number)
+    except ApiError as e:
+        if json_output and e.response_data:
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Output
+    if json_output:
+        print(json.dumps(version_data, indent=2))
+    else:
+        # Extract page metadata
+        title = version_data.get("title", "Untitled")
+        version_info = version_data.get("version", {})
+        version_num = version_info.get("number", version_number)
+        created_at = version_info.get("createdAt", "")
+        author_id = version_info.get("authorId", "")
+        message = version_info.get("message", "")
+
+        # Show metadata
+        console.print(f"[bold]{title}[/bold]")
+        console.print(f"Version: {version_num}")
+        if created_at:
+            console.print(f"Created: {format_relative_time(created_at)}")
+        if author_id:
+            console.print(f"Author: {author_id}")
+        if message:
+            console.print(f"Message: {message}")
+        console.print("---\n")
+
+        # Get content
+        content = _get_page_content(version_data, format_type="storage")
+
+        if markdown:
+            # Convert to markdown
+            markdown_content = storage_to_markdown(content)
+            if sys.stdout.isatty():
+                # Render markdown with Rich
+                md = Markdown(markdown_content)
+                console.print(md)
+            else:
+                # Output raw markdown
+                print(markdown_content)
+        else:
+            # Output raw storage format
+            print(content)
+
+
+@app.command(name="restore")
+def restore_command(
+    ref: str = typer.Argument(help="Page ID or URL"),
+    version_number: int = typer.Argument(help="Version number to restore to"),
+    message: str = typer.Option("", help="Update message for the restoration"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Restore a page to a specific version.
+
+    Creates a new version of the page with the content from the specified historical version.
+    This does not delete newer versions - it creates a new version with the old content.
+
+    Examples:
+        confl page restore 12345678 5
+        confl page restore 12345678 3 --message "Reverting to previous design"
+        confl page restore 12345678 2 --dry-run
+    """
+    # Extract page ID
+    try:
+        page_id = _extract_page_id(ref)
+    except ValueError as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(2)
+
+    # Fetch the target version and current page
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+
+        # Get version to restore
+        version_data = confluence.get_page_version(page_id, version_number)
+        # Get current page for version number
+        current_page = confluence.get_page(page_id)
+        current_version = current_page.get("version", {}).get("number", 0)
+        title = version_data.get("title", "")
+
+    except ApiError as e:
+        if json_output and e.response_data:
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Extract content from version
+    content = _get_page_content(version_data, format_type="storage")
+
+    # Generate message if not provided
+    if not message:
+        message = f"Restored to version {version_number}"
+
+    # Dry run mode
+    if dry_run:
+        if json_output:
+            result = {
+                "dry_run": True,
+                "action": "restore",
+                "page_id": page_id,
+                "current_version": current_version,
+                "restore_to_version": version_number,
+                "new_version": current_version + 1,
+                "message": message,
+                "content_length": len(content),
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            console.print("[yellow]DRY RUN:[/yellow] Would restore page:")
+            console.print(f"  Page ID: {page_id}")
+            console.print(f"  Current version: {current_version}")
+            console.print(f"  Restore to version: {version_number}")
+            console.print(f"  New version: {current_version + 1}")
+            console.print(f"  Message: {message}")
+            console.print(f"  Content: {len(content)} characters")
+        return
+
+    # Perform restoration by updating page with old content
+    try:
+        if sys.stdout.isatty() and not json_output:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True,
+            ) as progress:
+                progress.add_task("Restoring page...", total=None)
+                updated_page = confluence.update_page(
+                    page_id=page_id,
+                    title=title,
+                    body=content,
+                    version_number=current_version + 1,
+                )
+        else:
+            updated_page = confluence.update_page(
+                page_id=page_id,
+                title=title,
+                body=content,
+                version_number=current_version + 1,
+            )
+    except ApiError as e:
+        if json_output and e.response_data:
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+    # Output success
+    if json_output:
+        print(json.dumps(updated_page, indent=2))
+    else:
+        new_version = updated_page.get("version", {}).get("number", "")
+        console.print(
+            f"[green]✓[/green] Page {page_id} restored to version {version_number} "
+            f"(new version {new_version})"
+        )

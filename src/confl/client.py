@@ -1376,3 +1376,48 @@ class ConfluenceClient:
             handle_api_error(response)
 
         return cast(dict[str, Any], response.json())
+
+    def list_page_versions(self, page_id: str, limit: int = 25) -> list[dict[str, Any]]:
+        """List all versions of a page.
+
+        Args:
+            page_id: Page ID
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of version objects with number, message, createdAt, authorId, minorEdit
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+
+        response = self.client.get(f"/pages/{page_id}/versions", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def get_page_version(self, page_id: str, version_number: int) -> dict[str, Any]:
+        """Get a specific version of a page.
+
+        Args:
+            page_id: Page ID
+            version_number: Version number to retrieve
+
+        Returns:
+            Page data from that version including id, title, body content
+
+        Raises:
+            ApiError: If the request fails
+        """
+        response = self.client.get(
+            f"/pages/{page_id}/versions/{version_number}", params={"body-format": "storage"}
+        )
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
