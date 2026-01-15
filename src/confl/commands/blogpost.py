@@ -312,6 +312,9 @@ def list_blogposts(
 def delete_blogpost(
     ref: str = typer.Argument(..., help="Blog post ID or URL"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Delete a blog post.
 
@@ -319,12 +322,22 @@ def delete_blogpost(
         confl blogpost delete 12345678
         confl blogpost delete "https://company.atlassian.net/wiki/spaces/DEV/blogposts/12345678/Title"
         confl blogpost delete 12345678 --json
+        confl blogpost delete 12345678 --dry-run
     """
     try:
         blogpost_id = _extract_blogpost_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
+
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {"dry_run": True, "action": "delete_blogpost", "blogpost_id": blogpost_id}
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would delete blog post {blogpost_id}")
+        return
 
     # Delete the blog post
     try:
@@ -360,6 +373,9 @@ def create_blogpost(
     body_file: str = typer.Option(None, "--body-file", help="Read content from file"),
     raw: bool = typer.Option(False, "--raw", help="Provide content in storage format directly"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Create a new blog post.
 
@@ -368,6 +384,7 @@ def create_blogpost(
         confl blogpost create --space DEV --title "Update" --body-file content.md
         cat content.md | confl blogpost create --space DEV --title "Announcement"
         confl blogpost create --space DEV --title "Post" --body "<p>HTML</p>" --raw
+        confl blogpost create --space DEV --title "Post" --body "# Content" --dry-run
     """
     # Get content from various sources
     content = None
@@ -399,6 +416,24 @@ def create_blogpost(
 
     # Convert markdown to storage format unless --raw
     storage_content = content if raw else markdown_to_storage(content)
+
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {
+                "dry_run": True,
+                "action": "create_blogpost",
+                "space": space,
+                "title": title,
+                "content_length": len(storage_content),
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            console.print("[yellow]DRY RUN:[/yellow] Would create blog post:")
+            console.print(f"  Title: {title}")
+            console.print(f"  Space: {space}")
+            console.print(f"  Content: {len(storage_content)} characters")
+        return
 
     # Get space ID from space key
     try:
@@ -463,6 +498,9 @@ def update_blogpost(
     ),
     raw: bool = typer.Option(False, "--raw", help="Provide content in storage format directly"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Update an existing blog post's content and/or title.
 
@@ -473,6 +511,7 @@ def update_blogpost(
         confl blogpost update 12345678 --title "New Title"
         confl blogpost update 12345678 --body "Content" --title "New Title"
         confl blogpost update 12345678 --body "<p>HTML</p>" --raw
+        confl blogpost update 12345678 --title "New Title" --dry-run
     """
     # Extract blog post ID
     try:
@@ -508,6 +547,29 @@ def update_blogpost(
             "[red]Error:[/red] Must provide content via --body, --body-file, stdin, or --title"
         )
         sys.exit(2)
+
+    # Dry-run mode (early exit, no API calls needed)
+    if dry_run:
+        updates = []
+        if title:
+            updates.append(f"title to '{title}'")
+        if content:
+            updates.append(f"content ({len(content)} characters)")
+
+        if json_output:
+            result = {
+                "dry_run": True,
+                "action": "update_blogpost",
+                "blogpost_id": blogpost_id,
+                "title": title,
+                "content_length": len(content) if content else None,
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would update blog post {blogpost_id}:")
+            for update in updates:
+                console.print(f"  - Set {update}")
+        return
 
     # Get current blog post to fetch version and existing title/content
     try:

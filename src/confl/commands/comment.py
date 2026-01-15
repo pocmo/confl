@@ -199,6 +199,9 @@ def add_comment(
     body_file: str = typer.Option(None, "--body-file", help="Read body from file"),
     parent: str = typer.Option(None, "--parent", help="Parent comment ID for replies"),
     json_output: bool = typer.Option(False, "--json", help="Output full API response as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Add a comment to a page or reply to another comment.
 
@@ -206,6 +209,7 @@ def add_comment(
         confl comment add --page 123456 --body "Great work!"
         confl comment add --page 123456 --body-file comment.md
         confl comment add --parent 789012 --body "I agree"
+        confl comment add --page 123456 --body "Comment" --dry-run
     """
     try:
         # Validate inputs
@@ -229,6 +233,27 @@ def add_comment(
         storage_body = markdown_to_storage(body_text)
 
         page_id = _extract_page_id(page) if page else None
+
+        # Dry-run mode
+        if dry_run:
+            if json_output:
+                result = {
+                    "dry_run": True,
+                    "action": "add_comment",
+                    "page_id": page_id,
+                    "parent_comment_id": parent,
+                    "body_length": len(storage_body),
+                }
+                print(json.dumps(result, indent=2))
+            else:
+                console.print("[yellow]DRY RUN:[/yellow] Would add comment:")
+                if page_id:
+                    console.print(f"  Page: {page_id}")
+                if parent:
+                    console.print(f"  Parent comment: {parent}")
+                console.print(f"  Body: {len(storage_body)} characters")
+            return
+
         client = get_client()
         confluence = ConfluenceClient(client)
 
@@ -263,12 +288,16 @@ def update_comment(
     body: str = typer.Option(None, "--body", help="New comment body text (markdown)"),
     body_file: str = typer.Option(None, "--body-file", help="Read body from file"),
     json_output: bool = typer.Option(False, "--json", help="Output full API response as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Update a comment's body.
 
     Examples:
         confl comment update 123456 --body "Updated text"
         confl comment update 123456 --body-file comment.md
+        confl comment update 123456 --body "Updated" --dry-run
     """
     try:
         if not body and not body_file:
@@ -285,6 +314,21 @@ def update_comment(
 
         # Convert markdown to storage format
         storage_body = markdown_to_storage(body_text)
+
+        # Dry-run mode
+        if dry_run:
+            if json_output:
+                result = {
+                    "dry_run": True,
+                    "action": "update_comment",
+                    "comment_id": comment_id,
+                    "body_length": len(storage_body),
+                }
+                print(json.dumps(result, indent=2))
+            else:
+                console.print(f"[yellow]DRY RUN:[/yellow] Would update comment {comment_id}:")
+                console.print(f"  Body: {len(storage_body)} characters")
+            return
 
         client = get_client()
         confluence = ConfluenceClient(client)
@@ -313,13 +357,26 @@ def update_comment(
 def delete_comment(
     comment_id: str = typer.Argument(..., help="Comment ID to delete"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Delete a comment.
 
     Examples:
         confl comment delete 123456
         confl comment delete 123456 --json
+        confl comment delete 123456 --dry-run
     """
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {"dry_run": True, "action": "delete_comment", "comment_id": comment_id}
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would delete comment {comment_id}")
+        return
+
     try:
         client = get_client()
         confluence = ConfluenceClient(client)

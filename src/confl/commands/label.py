@@ -89,6 +89,9 @@ def add_labels(
     labels: list[str],
     page: str = typer.Option(..., "--page", help="Page ID or URL"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON array"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Add one or more labels to a page.
 
@@ -96,12 +99,32 @@ def add_labels(
         confl label add --page 123456 architecture design
         confl label add --page 123456 "my-label" "another-label"
         confl label add --page 123456 release-notes --json
+        confl label add --page 123456 architecture design --dry-run
 
     Args:
         labels: Label names to add
     """
+    page_id = _extract_page_id(page)
+
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {
+                "dry_run": True,
+                "action": "add_labels",
+                "page_id": page_id,
+                "labels": labels,
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(
+                f"[yellow]DRY RUN:[/yellow] Would add {len(labels)} label(s) to page {page_id}:"
+            )
+            for label_name in labels:
+                console.print(f"  • {label_name}")
+        return
+
     try:
-        page_id = _extract_page_id(page)
         client = get_client()
         confluence = ConfluenceClient(client)
         added_labels = confluence.add_labels_to_page(page_id, labels)
@@ -126,18 +149,34 @@ def remove_label(
     label: str,
     page: str = typer.Option(..., "--page", help="Page ID or URL"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Remove a label from a page.
 
     Examples:
         confl label remove --page 123456 old-label
         confl label remove --page 123456 "label-to-remove"
+        confl label remove --page 123456 old-label --dry-run
 
     Args:
         label: Label name to remove
     """
+    page_id = _extract_page_id(page)
+
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {"dry_run": True, "action": "remove_label", "page_id": page_id, "label": label}
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(
+                f"[yellow]DRY RUN:[/yellow] Would remove label '{label}' from page {page_id}"
+            )
+        return
+
     try:
-        page_id = _extract_page_id(page)
         client = get_client()
         confluence = ConfluenceClient(client)
         confluence.remove_label_from_page(page_id, label)

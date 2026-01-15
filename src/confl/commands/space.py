@@ -180,6 +180,9 @@ def update_space(
     name: str = typer.Option(None, "--name", help="New space name"),
     description: str = typer.Option(None, "--description", help="New space description"),
     json_output: bool = typer.Option(False, "--json", help="Output updated space as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Update space details.
 
@@ -188,13 +191,38 @@ def update_space(
         confl space update DEV --description "New description"
         confl space update DEV --name "New Name" --description "New description"
         confl space update 123456 --name "New Name" --json
+        confl space update DEV --name "New Name" --dry-run
     """
     if not name and not description:
         err_console.print("[red]Error:[/red] At least one of --name or --description is required")
         sys.exit(2)
 
+    space_ref = _extract_space_id_or_key(ref)
+
+    # Dry-run mode
+    if dry_run:
+        updates = []
+        if name:
+            updates.append(f"name to '{name}'")
+        if description:
+            updates.append(f"description to '{description}'")
+
+        if json_output:
+            result = {
+                "dry_run": True,
+                "action": "update_space",
+                "space": space_ref,
+                "name": name,
+                "description": description,
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would update space {space_ref}:")
+            for update in updates:
+                console.print(f"  - Set {update}")
+        return
+
     try:
-        space_ref = _extract_space_id_or_key(ref)
         client = get_client()
         confluence = ConfluenceClient(client)
         space = confluence.update_space(space_ref, name=name, description=description)
@@ -218,6 +246,9 @@ def update_space(
 def delete_space(
     ref: str = typer.Argument(..., help="Space key or ID"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Delete a space.
 
@@ -227,9 +258,24 @@ def delete_space(
         confl space delete DEV
         confl space delete 123456
         confl space delete DEV --json
+        confl space delete DEV --dry-run
     """
+    space_ref = _extract_space_id_or_key(ref)
+
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {"dry_run": True, "action": "delete_space", "space": space_ref}
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would delete space {space_ref}")
+            console.print(
+                "[yellow]Warning:[/yellow] This would permanently delete the space "
+                "and all its content"
+            )
+        return
+
     try:
-        space_ref = _extract_space_id_or_key(ref)
         client = get_client()
         confluence = ConfluenceClient(client)
         confluence.delete_space(space_ref)

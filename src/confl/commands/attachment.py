@@ -208,6 +208,9 @@ def upload_attachment(
     file: str = typer.Option(..., "--file", help="Path to file to upload"),
     comment: str = typer.Option(None, "--comment", help="Optional comment for attachment"),
     json_output: bool = typer.Option(False, "--json", help="Output full API response as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Upload file attachment to a page.
 
@@ -215,9 +218,38 @@ def upload_attachment(
         confl attachment upload --page 123456 --file diagram.png
         confl attachment upload --page 123456 --file doc.pdf --comment "Updated documentation"
         confl attachment upload --page 123456 --file image.jpg --json
+        confl attachment upload --page 123456 --file doc.pdf --dry-run
     """
     try:
         page_id = _extract_page_id(page)
+
+        # Check if file exists before dry-run output
+        file_path = Path(file)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file}")
+
+        # Dry-run mode
+        if dry_run:
+            file_size = file_path.stat().st_size
+            if json_output:
+                result = {
+                    "dry_run": True,
+                    "action": "upload",
+                    "page_id": page_id,
+                    "file": file,
+                    "file_size": file_size,
+                    "comment": comment,
+                }
+                print(json.dumps(result, indent=2))
+            else:
+                console.print("[yellow]DRY RUN:[/yellow] Would upload attachment:")
+                console.print(f"  Page: {page_id}")
+                console.print(f"  File: {file}")
+                console.print(f"  Size: {file_size} bytes")
+                if comment:
+                    console.print(f"  Comment: {comment}")
+            return
+
         client = get_client()
         confluence = ConfluenceClient(client)
 
@@ -247,13 +279,26 @@ def upload_attachment(
 def delete_attachment(
     attachment_id: str = typer.Argument(..., help="Attachment ID"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Delete an attachment.
 
     Examples:
         confl attachment delete att123456
         confl attachment delete att123456 --json
+        confl attachment delete att123456 --dry-run
     """
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {"dry_run": True, "action": "delete", "attachment_id": attachment_id}
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would delete attachment {attachment_id}")
+        return
+
     try:
         client = get_client()
         confluence = ConfluenceClient(client)

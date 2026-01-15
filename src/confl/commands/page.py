@@ -292,6 +292,9 @@ def list_pages(
 def delete_page(
     ref: str = typer.Argument(..., help="Page ID or URL"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Delete a page.
 
@@ -299,12 +302,22 @@ def delete_page(
         confl page delete 12345678
         confl page delete "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678/Title"
         confl page delete 12345678 --json
+        confl page delete 12345678 --dry-run
     """
     try:
         page_id = _extract_page_id(ref)
     except ValueError as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(2)
+
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {"dry_run": True, "action": "delete", "page_id": page_id}
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would delete page {page_id}")
+        return
 
     # Delete the page
     try:
@@ -337,6 +350,9 @@ def create_page(
     parent: str = typer.Option(None, "--parent", help="Parent page ID (optional)"),
     raw: bool = typer.Option(False, "--raw", help="Provide content in storage format directly"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Create a new page.
 
@@ -346,6 +362,7 @@ def create_page(
         cat content.md | confl page create --space DEV --title "My Page"
         confl page create --space DEV --title "Child" --parent 12345678 --body "Content"
         confl page create --space DEV --title "Page" --body "<p>HTML</p>" --raw
+        confl page create --space DEV --title "My Page" --body "# Content" --dry-run
     """
     # Get content from various sources
     content = None
@@ -377,6 +394,26 @@ def create_page(
 
     # Convert markdown to storage format unless --raw
     storage_content = content if raw else markdown_to_storage(content)
+
+    # Dry-run mode
+    if dry_run:
+        if json_output:
+            result = {
+                "dry_run": True,
+                "action": "create",
+                "space": space,
+                "title": title,
+                "parent": parent,
+                "content_length": len(storage_content),
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            console.print("[yellow]DRY RUN:[/yellow] Would create page:")
+            console.print(f"  Title: {title}")
+            console.print(f"  Space: {space}")
+            console.print(f"  Parent: {parent or 'none'}")
+            console.print(f"  Content: {len(storage_content)} characters")
+        return
 
     # Get space ID from space key
     try:
@@ -442,6 +479,9 @@ def update_page(
     ),
     raw: bool = typer.Option(False, "--raw", help="Provide content in storage format directly"),
     json_output: bool = typer.Option(False, "--json", help="Output result as JSON"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be done without making changes"
+    ),
 ) -> None:
     """Update an existing page's content and/or title.
 
@@ -452,6 +492,7 @@ def update_page(
         confl page update 12345678 --title "New Title"
         confl page update 12345678 --body "Content" --title "New Title"
         confl page update 12345678 --body "<p>HTML</p>" --raw
+        confl page update 12345678 --body "# Content" --dry-run
     """
     # Extract page ID
     try:
@@ -487,6 +528,29 @@ def update_page(
             "[red]Error:[/red] Must provide content via --body, --body-file, stdin, or --title"
         )
         sys.exit(2)
+
+    # Dry-run mode (early exit, no API calls needed)
+    if dry_run:
+        updates = []
+        if title:
+            updates.append(f"title to '{title}'")
+        if content:
+            updates.append(f"content ({len(content)} characters)")
+
+        if json_output:
+            result = {
+                "dry_run": True,
+                "action": "update",
+                "page_id": page_id,
+                "title": title,
+                "content_length": len(content) if content else None,
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            console.print(f"[yellow]DRY RUN:[/yellow] Would update page {page_id}:")
+            for update in updates:
+                console.print(f"  - Set {update}")
+        return
 
     # Get current page to fetch version and existing title/content
     try:
