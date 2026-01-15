@@ -1,6 +1,6 @@
 ---
 id: c-08ff
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T08:14:32Z
@@ -58,3 +58,7 @@ confl/
 - Contributors can explore the codebase themselves
 - Keep it high-level and stable
 
+
+**2026-01-15T08:19:45Z**
+
+Completed: Simplified project structure section in CONTRIBUTING.md. Removed detailed file listings, kept only high-level directories (src/confl, tests, docs, .ralph, .tickets) with brief descriptions. Section is now maintainable and won't require frequent updates.

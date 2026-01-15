@@ -51,35 +51,20 @@ uv run pytest
 
 ```
 confl/
-├── src/confl/           # Main package
-│   ├── cli.py           # CLI entry point, command registration
-│   ├── client.py        # Confluence API client
-│   ├── config.py        # Configuration management
-│   ├── credentials.py   # Authentication handling
-│   ├── formatters.py    # Output formatting (Rich, JSON)
-│   ├── converter.py     # Markdown ↔ Confluence conversion
-│   ├── cql.py           # CQL query builder
-│   ├── table_formatter.py  # Table output formatting
-│   └── commands/        # Command modules (one per entity)
-│       ├── auth.py      # Authentication commands
-│       ├── page.py      # Page commands
-│       ├── space.py     # Space commands
-│       ├── attachment.py
-│       ├── label.py
-│       ├── comment.py
-│       ├── blogpost.py
-│       └── search.py
-├── tests/               # Tests (mirrors src/ structure)
-├── docs/                # Documentation
-│   ├── architecture/    # Architecture decisions and design docs
-│   ├── getting-started.md
-│   ├── installation.md
-│   ├── authentication.md
-│   ├── configuration.md
-│   └── commands.md      # Comprehensive command reference
-├── pyproject.toml       # Project configuration and dependencies
-└── uv.lock              # Locked dependencies
+├── src/confl/       # Main package - CLI, API client, commands, formatters
+├── tests/           # Test suite (mirrors src/ structure)
+├── docs/            # User documentation and architecture decisions
+│   └── architecture/  # Architecture decision records and design docs
+├── .ralph/          # Ralph agent loop implementation and handoff logs
+├── .tickets/        # Ticket system (tk) - task tracking
+└── pyproject.toml   # Project configuration and dependencies
 ```
+
+The codebase is organized for clarity:
+- **src/confl/** contains all application code: CLI entry point, API client, command modules, and output formatters
+- **tests/** mirrors the src/ structure for easy navigation
+- **docs/** includes both user-facing guides and architecture documentation
+- **.ralph/** and **.tickets/** support autonomous development workflows
 
 ## Running Tests
 
