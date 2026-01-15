@@ -22,6 +22,8 @@ confl page list --space DEV
 confl page get <page-id>
 ```
 
+**New to confl?** Check out the [Getting Started Guide](docs/getting-started.md) for a comprehensive walkthrough.
+
 See [Authentication](#authentication) and [Configuration](#configuration) for more details.
 
 ## Authentication
