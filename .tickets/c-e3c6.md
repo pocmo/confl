@@ -1,6 +1,6 @@
 ---
 id: c-e3c6
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T08:08:03Z
@@ -34,3 +34,9 @@ Acceptance:
 
 Reference: arch_audit_findings.md
 
+
+## Notes
+
+**2026-01-15T08:18:17Z**
+
+Completed: Updated cli-subcommands.md with implementation status markers. Added status summary showing Phases 1 & 2 complete, Phase 3 partial (version history ✅, task ❌). Updated roadmap and all entity sections with ✅/❌/⚠️ markers.
