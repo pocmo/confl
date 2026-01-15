@@ -112,7 +112,6 @@ See [Commands Reference](docs/commands.md) for complete command documentation wi
 - [Authentication Guide](docs/authentication.md) — API token setup and security best practices
 - [Configuration Guide](docs/configuration.md) — Profiles, environment variables, and global options
 - [Commands Reference](docs/commands.md) — Complete command documentation
-- [Architecture Documentation](docs/architecture/README.md) — Design principles, technical decisions, and implementation details
 
 ## Contributing
 
