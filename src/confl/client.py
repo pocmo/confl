@@ -1439,3 +1439,93 @@ class ConfluenceClient:
             handle_api_error(response)
 
         return cast(dict[str, Any], response.json())
+
+    def list_tasks(
+        self,
+        status: str | None = None,
+        assigned_to: str | None = None,
+        page_id: str | None = None,
+        space_id: str | None = None,
+        limit: int = 25,
+    ) -> list[dict[str, Any]]:
+        """List tasks with optional filters.
+
+        Args:
+            status: Filter by status (complete, incomplete)
+            assigned_to: Filter by assigned user Account ID
+            page_id: Filter by page ID
+            space_id: Filter by space ID
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of task objects with id, status, body, pageId, assignedTo, etc.
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit)}
+        if status:
+            params["status"] = status
+        if assigned_to:
+            params["assigned-to"] = assigned_to
+        if page_id:
+            params["page-id"] = page_id
+        if space_id:
+            params["space-id"] = space_id
+
+        response = self.client.get("/tasks", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def get_task(self, task_id: str) -> dict[str, Any]:
+        """Get a task by ID.
+
+        Args:
+            task_id: Task ID
+
+        Returns:
+            Task data including id, status, body, pageId, assignedTo, etc.
+
+        Raises:
+            ApiError: If the request fails
+        """
+        # Task retrieval requires list with task-id filter
+        params = {"task-id": task_id, "limit": "1"}
+        response = self.client.get("/tasks", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        results = cast(list[dict[str, Any]], result.get("results", []))
+
+        if not results:
+            raise ApiError(f"Task not found: {task_id}", status_code=404)
+
+        return results[0]
+
+    def update_task(self, task_id: str, status: str) -> dict[str, Any]:
+        """Update a task's status.
+
+        Args:
+            task_id: Task ID to update
+            status: New status (complete or incomplete)
+
+        Returns:
+            Updated task data
+
+        Raises:
+            ApiError: If the request fails
+        """
+        payload = {"status": status}
+
+        response = self.client.put(f"/tasks/{task_id}", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())

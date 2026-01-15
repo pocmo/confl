@@ -1272,3 +1272,195 @@ def test_confluence_client_create_page_invalid_parent(httpx_mock: HTTPXMock):
 
     assert exc_info.value.status_code == 404
     assert "Not found" in str(exc_info.value)
+
+
+def test_confluence_client_list_tasks(httpx_mock: HTTPXMock):
+    """Test listing tasks without filters."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    # Mock successful response
+    response_data = {
+        "results": [
+            {
+                "id": "123",
+                "status": "incomplete",
+                "pageId": "456",
+                "spaceId": "789",
+                "body": {"storage": {"value": "<p>Task 1</p>"}},
+            },
+            {
+                "id": "124",
+                "status": "complete",
+                "pageId": "457",
+                "spaceId": "789",
+                "body": {"storage": {"value": "<p>Task 2</p>"}},
+            },
+        ],
+        "_links": {},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/tasks?limit=25",
+        json=response_data,
+    )
+
+    result = confluence.list_tasks()
+
+    assert len(result) == 2
+    assert result[0]["id"] == "123"
+    assert result[0]["status"] == "incomplete"
+    assert result[1]["id"] == "124"
+    assert result[1]["status"] == "complete"
+
+
+def test_confluence_client_list_tasks_with_filters(httpx_mock: HTTPXMock):
+    """Test listing tasks with filters."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    response_data = {
+        "results": [
+            {
+                "id": "125",
+                "status": "incomplete",
+                "pageId": "456",
+                "assignedTo": "user123",
+            },
+        ],
+        "_links": {},
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/tasks?limit=25&status=incomplete&assigned-to=user123&page-id=456",
+        json=response_data,
+    )
+
+    result = confluence.list_tasks(status="incomplete", assigned_to="user123", page_id="456")
+
+    assert len(result) == 1
+    assert result[0]["id"] == "125"
+    assert result[0]["status"] == "incomplete"
+
+
+def test_confluence_client_get_task(httpx_mock: HTTPXMock):
+    """Test getting a task by ID."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    response_data = {
+        "results": [
+            {
+                "id": "123",
+                "status": "incomplete",
+                "pageId": "456",
+                "spaceId": "789",
+                "body": {"storage": {"value": "<p>Task details</p>"}},
+            }
+        ]
+    }
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/tasks?task-id=123&limit=1",
+        json=response_data,
+    )
+
+    result = confluence.get_task("123")
+
+    assert result["id"] == "123"
+    assert result["status"] == "incomplete"
+    assert result["pageId"] == "456"
+
+
+def test_confluence_client_get_task_not_found(httpx_mock: HTTPXMock):
+    """Test getting a non-existent task."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="GET",
+        url="https://test.atlassian.net/wiki/api/v2/tasks?task-id=999&limit=1",
+        json={"results": []},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.get_task("999")
+
+    assert exc_info.value.status_code == 404
+    assert "Task not found" in str(exc_info.value)
+
+
+def test_confluence_client_update_task(httpx_mock: HTTPXMock):
+    """Test updating a task's status."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    response_data = {
+        "id": "123",
+        "status": "complete",
+        "pageId": "456",
+        "body": {"storage": {"value": "<p>Task</p>"}},
+    }
+
+    httpx_mock.add_response(
+        method="PUT",
+        url="https://test.atlassian.net/wiki/api/v2/tasks/123",
+        json=response_data,
+    )
+
+    result = confluence.update_task("123", "complete")
+
+    assert result["id"] == "123"
+    assert result["status"] == "complete"
+
+
+def test_confluence_client_update_task_not_found(httpx_mock: HTTPXMock):
+    """Test updating a non-existent task."""
+    config = Config(
+        site="test.atlassian.net",
+        email="test@example.com",
+        token="token123",
+    )
+    client = create_client(config)
+    confluence = ConfluenceClient(client)
+
+    httpx_mock.add_response(
+        method="PUT",
+        url="https://test.atlassian.net/wiki/api/v2/tasks/999",
+        status_code=404,
+        json={"message": "Task not found"},
+    )
+
+    with pytest.raises(ApiError) as exc_info:
+        confluence.update_task("999", "complete")
+
+    assert exc_info.value.status_code == 404
+    assert "Not found" in str(exc_info.value)

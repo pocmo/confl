@@ -4,7 +4,7 @@ import logging
 
 import typer
 
-from confl.commands import attachment, auth, blogpost, comment, label, page, search, space
+from confl.commands import attachment, auth, blogpost, comment, label, page, search, space, task
 from confl.context import ExecutionContext
 
 app = typer.Typer(
@@ -21,6 +21,7 @@ app.add_typer(attachment.app, name="attachment")
 app.add_typer(label.app, name="label")
 app.add_typer(comment.app, name="comment")
 app.add_typer(blogpost.app, name="blogpost")
+app.add_typer(task.app, name="task")
 
 # Register direct commands
 app.command(name="search")(search.search_command)
