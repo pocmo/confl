@@ -1,3 +1,9 @@
+---
+Status: IMPLEMENTED
+Date: 2025-12-01
+Purpose: Document entity-first CLI command structure
+---
+
 # CLI Design
 
 ## Entities

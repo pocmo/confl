@@ -1,3 +1,9 @@
+---
+Status: GUIDE
+Date: 2025-12-01
+Purpose: Guidelines for creating effective tickets for AI agent workflow
+---
+
 # Filing Tickets
 
 Guidelines for creating good tickets that AI agents can work on effectively.

@@ -1,3 +1,9 @@
+---
+Status: REFERENCE
+Date: 2025-12-01
+Purpose: Comprehensive Confluence Cloud REST API v2 reference documentation
+---
+
 # Confluence Cloud REST API v2 Reference
 
 This document provides comprehensive API reference documentation for Confluence Cloud REST API v2.

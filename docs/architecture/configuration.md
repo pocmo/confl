@@ -1,3 +1,9 @@
+---
+Status: IMPLEMENTED
+Date: 2025-12-01
+Purpose: Document configuration and authentication methods
+---
+
 # Configuration
 
 ## Config Location

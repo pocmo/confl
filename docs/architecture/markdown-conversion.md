@@ -1,3 +1,10 @@
+---
+Status: DECISION
+Date: 2025-12-01
+Purpose: Document markdown conversion library selection and implementation
+Decision: Use md2cf + markdownify (both recommendations implemented)
+---
+
 # Markdown ↔ Confluence Storage Format Conversion
 
 ## Summary

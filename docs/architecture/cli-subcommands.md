@@ -1,3 +1,11 @@
+---
+Status: PLANNING (Phases 1 & 2 complete, Phase 3 in progress)
+Date: 2025-12-01
+Purpose: Document CLI subcommand expansion roadmap
+Implemented: auth, page, space, attachment, label, comment, blogpost, search
+Pending: task (P3)
+---
+
 # CLI Subcommands Analysis
 
 This document analyzes the Confluence Cloud REST API v2 to identify additional CLI subcommands beyond the currently implemented `page` entity.

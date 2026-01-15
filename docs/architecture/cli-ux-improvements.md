@@ -1,3 +1,11 @@
+---
+Status: PARTIALLY IMPLEMENTED
+Date: 2026-01-14
+Purpose: Document CLI UX improvements based on best practices
+Implemented: H2 (confirmation prompts), H5 (dry-run), M1 (verbose/debug)
+Pending: H1 (progress indicators), H3 (better error messages), H4 (human-readable formats), M2-M5, L1-L6
+---
+
 # CLI UX Improvements
 
 Analysis of CLI user experience best practices and specific improvements for confl.

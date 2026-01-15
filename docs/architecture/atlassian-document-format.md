@@ -1,3 +1,9 @@
+---
+Status: REFERENCE
+Date: 2025-12-01
+Purpose: Document Atlassian Document Format (ADF) specification
+---
+
 # Atlassian Document Format (ADF)
 
 ## Overview

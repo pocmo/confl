@@ -1,3 +1,9 @@
+---
+Status: VISION
+Date: 2025-12-01
+Purpose: Define project goals and target audience
+---
+
 # Goals
 
 ## Primary Audience

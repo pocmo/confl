@@ -1,3 +1,10 @@
+---
+Status: PROPOSAL (Not Implemented)
+Date: 2026-01-14
+Purpose: Evaluate OAuth browser login feasibility for confl auth
+Decision: Deferred - API token auth sufficient for MVP
+---
+
 # OAuth Browser Login Implementation
 
 ## Summary

@@ -1,3 +1,9 @@
+---
+Status: IMPLEMENTED
+Date: 2025-12-01
+Purpose: Core design principles guiding confl development
+---
+
 # Design Principles
 
 Guidelines for making design decisions in `confl`.

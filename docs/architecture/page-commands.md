@@ -1,3 +1,9 @@
+---
+Status: IMPLEMENTED
+Date: 2025-12-01
+Purpose: Document page command group implementation
+---
+
 # Page Commands
 
 The `page` entity is the core of `confl`.
