@@ -60,12 +60,21 @@ When working on tickets prefixed with "DECISION:", "DESIGN:", or "Evaluate" (dis
 
 ## Verification Requirements
 
-Before closing any implementation ticket:
-1. **Format & lint**: `uv run ruff format . && uv run ruff check --fix .`
+**CRITICAL: Before closing ANY ticket, you MUST run these checks in order:**
+
+1. **Format & lint** (REQUIRED - CI will fail if you skip this):
+   ```bash
+   uv run ruff format .
+   uv run ruff check --fix .
+   ```
+   Verify with: `uv run ruff format --check . && uv run ruff check .`
+   
 2. **Type check**: `uv run mypy src/`
 3. **Tests must pass**: `uv run pytest`
 4. **Manual verification**: Run confl commands to verify behavior
 5. **No regressions**: Existing functionality still works
+
+**If any check fails, fix it before committing. Do not commit code that fails ruff/mypy/pytest.**
 
 ## Commit Messages
 
