@@ -194,3 +194,19 @@ class TestFormatDuration:
         """Test formatting with decimal seconds."""
         assert format_duration(45.7) == "45s"
         assert format_duration(90.9) == "1m 30s"
+
+
+class TestFormatRelativeTimeEdgeCases:
+    """Additional edge case tests for format_relative_time to improve coverage."""
+
+    def test_naive_timestamp(self):
+        """Test handling of timezone-naive timestamps."""
+        from datetime import datetime, timedelta
+
+        # Create a naive timestamp (no timezone info)
+        now = datetime.now()
+        naive_timestamp = (now - timedelta(hours=2)).isoformat()
+
+        # Should handle naive timestamps by adding UTC timezone
+        result = format_relative_time(naive_timestamp)
+        assert "ago" in result or result == "just now"

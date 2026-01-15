@@ -218,6 +218,30 @@ class TestSortItems:
         """Test sorting empty list."""
         assert sort_items([], sort_by="title") == []
 
+    def test_sort_with_type_error(self) -> None:
+        """Test sorting with incompatible types (should handle gracefully)."""
+        items = [
+            {"value": 10},
+            {"value": "string"},
+            {"value": 5},
+        ]
+        # Should return original order when sorting fails due to type mismatch
+        sorted_items = sort_items(items, sort_by="value")
+        assert len(sorted_items) == 3
+
+    def test_sort_nested_field_with_non_dict_value(self) -> None:
+        """Test sorting by nested field when intermediate value is not a dict."""
+        items = [
+            {"version": "string_not_dict", "id": "1"},
+            {"version": {"createdAt": "2024-01-01"}, "id": "2"},
+            {"version": {"createdAt": "2024-01-02"}, "id": "3"},
+        ]
+        sorted_items = sort_items(items, sort_by="version.createdAt")
+        # Item with string version should sort to beginning (returns empty string)
+        assert sorted_items[0]["id"] == "1"
+        assert sorted_items[1]["id"] == "2"
+        assert sorted_items[2]["id"] == "3"
+
 
 class TestPrintTableWithPagination:
     """Tests for print_table_with_pagination function."""
