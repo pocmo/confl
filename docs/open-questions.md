@@ -1,39 +1,43 @@
 # Open Questions
 
-Design questions to resolve in future sessions.
+_Note: This file previously contained design questions that have all been resolved in implementation. See the sections below for current status._
 
-## Search
+## Resolved Questions
 
-- Should `confl search` use Confluence's CQL (Confluence Query Language) or simple text search?
-- What fields to display in search results?
-- How to handle pagination in search results?
+All questions from the initial design phase have been addressed:
 
-## Space Commands
+### Search ✅
+- **Decision**: Uses CQL with simple filter options
+- **Implementation**: `confl search` supports both raw CQL queries and simple filters (--text, --space, --type, --label)
+- **Pagination**: Uses --limit flag (default 25)
 
-- What actions beyond `list` and `get`? Create/delete spaces?
-- Should `space list` show all spaces or filter by permissions?
+### Space Commands ✅
+- **Decision**: Full CRUD operations
+- **Implementation**: list, get, create, update, delete commands
+- **Permissions**: API returns spaces based on user permissions
 
-## Pagination
+### Pagination ✅
+- **Decision**: Uses --limit flag
+- **Implementation**: All list commands support --limit (default 25)
 
-- How to expose pagination in `list` commands?
-- Options: `--limit`, `--cursor`, automatic fetching, or interactive paging?
+### Page Lookup ✅
+- **Decision**: Supports page ID or full URL
+- **Implementation**: `confl page get <id|url>`
+- **Note**: Title-based lookup not implemented (use `confl search --text "title" --space KEY` instead)
 
-## Page Lookup
+### Attachments ✅
+- **Decision**: Upload from local file system
+- **Implementation**: `confl attachment upload --page <id> --file <path>`
 
-- Support `--title "Page Name" --space KEY` for fuzzy lookup?
-- How to handle duplicate titles within a space?
+### Comments ✅
+- **Decision**: Page-level comments with threading via replies
+- **Implementation**: Full CRUD operations: list, get, add (with --reply-to for threading), update, delete
 
-## Attachments
+### Content Conversion ✅
+- **Decision**: Custom converter handling most common storage format elements
+- **Implementation**: Markdown conversion with HTML fallback for complex/unsupported elements
+- **See**: docs/architecture/markdown-conversion.md and storage-format-feature-gaps.md
 
-- Upload from local file or URL?
-- How to reference which page to attach to?
+## Current Questions
 
-## Comments
-
-- Inline comments vs page-level comments?
-- Threading support?
-
-## Content Conversion
-
-- Build our own Markdown ↔ storage format converter or use existing library?
-- How to handle Confluence-specific macros that have no Markdown equivalent?
+_Add new design questions here as they arise._
