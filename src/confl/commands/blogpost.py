@@ -9,11 +9,14 @@ from typing import Any
 import typer
 from rich.console import Console
 from rich.markdown import Markdown
-from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
 from confl.formatters import format_relative_time
+from confl.table_formatter import (
+    add_column_with_ellipsis,
+    create_table,
+)
 
 app = typer.Typer(help="Manage blog posts")
 console = Console()
@@ -291,12 +294,12 @@ def list_blogposts(
     if json_output:
         print(json.dumps(blogposts, indent=2))
     else:
-        # Rich table output
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("ID", style="dim")
-        table.add_column("Title")
-        table.add_column("Space")
-        table.add_column("Published")
+        # Rich table output with enhanced formatting
+        table = create_table()
+        add_column_with_ellipsis(table, "ID", style="dim")
+        add_column_with_ellipsis(table, "Title", max_width=60)
+        add_column_with_ellipsis(table, "Space", style="dim")
+        add_column_with_ellipsis(table, "Published")
 
         for blogpost in blogposts:
             blogpost_id = blogpost.get("id", "")

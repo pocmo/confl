@@ -7,11 +7,11 @@ from typing import Any
 
 import typer
 from rich.console import Console
-from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
 from confl.formatters import format_relative_time
+from confl.table_formatter import add_column_with_ellipsis, create_table
 
 app = typer.Typer(help="Manage comments")
 console = Console()
@@ -103,13 +103,13 @@ def list_comments(
     if json_output:
         print(json.dumps(all_comments, indent=2))
     else:
-        # Rich table output
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("ID", style="dim")
-        table.add_column("Type")
-        table.add_column("Body Preview")
-        table.add_column("Author")
-        table.add_column("Created")
+        # Rich table output with enhanced formatting
+        table = create_table()
+        add_column_with_ellipsis(table, "ID", style="dim")
+        add_column_with_ellipsis(table, "Type")
+        add_column_with_ellipsis(table, "Body Preview", max_width=50)
+        add_column_with_ellipsis(table, "Author", max_width=20)
+        add_column_with_ellipsis(table, "Created")
 
         for comment in all_comments:
             comment_id = comment.get("id", "")

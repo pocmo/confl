@@ -5,9 +5,9 @@ import sys
 
 import typer
 from rich.console import Console
-from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
+from confl.table_formatter import add_column_with_ellipsis, create_table
 
 app = typer.Typer(help="Manage labels")
 console = Console()
@@ -66,11 +66,11 @@ def list_labels(
     if json_output:
         print(json.dumps(labels, indent=2))
     else:
-        # Rich table output
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("ID", style="dim")
-        table.add_column("Name")
-        table.add_column("Prefix")
+        # Rich table output with enhanced formatting
+        table = create_table()
+        add_column_with_ellipsis(table, "ID", style="dim")
+        add_column_with_ellipsis(table, "Name", max_width=40)
+        add_column_with_ellipsis(table, "Prefix", max_width=20)
 
         for label in labels:
             label_id = label.get("id", "")

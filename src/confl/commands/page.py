@@ -10,11 +10,15 @@ import typer
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
 from confl.formatters import format_relative_time
+from confl.table_formatter import (
+    add_column_with_ellipsis,
+    create_table,
+    sort_items,
+)
 
 app = typer.Typer(help="Manage pages")
 console = Console()
@@ -247,12 +251,16 @@ def list_pages(
     space: str = typer.Option(..., "--space", help="Space key to filter by"),
     limit: int = typer.Option(25, "--limit", help="Maximum number of results"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON array"),
+    sort_by: str = typer.Option(None, "--sort", help="Sort by field (title, id)"),
+    reverse: bool = typer.Option(False, "--reverse", help="Reverse sort order"),
 ) -> None:
     """List pages in a space.
 
     Examples:
         confl page list --space DEV
         confl page list --space DEV --limit 50
+        confl page list --space DEV --sort title
+        confl page list --space DEV --sort title --reverse
         confl page list --space DEV --json
     """
     try:
@@ -268,16 +276,20 @@ def list_pages(
             err_console.print(f"[red]Error:[/red] {e.message}")
         sys.exit(1)
 
+    # Apply sorting if requested
+    if sort_by:
+        pages = sort_items(pages, sort_by=sort_by, reverse=reverse)
+
     # Output based on flags
     if json_output:
         print(json.dumps(pages, indent=2))
     else:
-        # Rich table output
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("ID", style="dim")
-        table.add_column("Title")
-        table.add_column("Space")
-        table.add_column("Updated")
+        # Rich table output with enhanced formatting
+        table = create_table()
+        add_column_with_ellipsis(table, "ID", style="dim")
+        add_column_with_ellipsis(table, "Title", max_width=60)
+        add_column_with_ellipsis(table, "Space", style="dim")
+        add_column_with_ellipsis(table, "Updated")
 
         for page in pages:
             page_id = page.get("id", "")

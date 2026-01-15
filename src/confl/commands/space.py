@@ -5,9 +5,13 @@ import sys
 
 import typer
 from rich.console import Console
-from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
+from confl.table_formatter import (
+    add_column_with_ellipsis,
+    colorize_status,
+    create_table,
+)
 
 app = typer.Typer(help="Manage spaces")
 console = Console()
@@ -62,12 +66,12 @@ def list_spaces(
     if json_output:
         print(json.dumps(spaces, indent=2))
     else:
-        # Rich table output
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("Key", style="dim")
-        table.add_column("Name")
-        table.add_column("Type")
-        table.add_column("Status")
+        # Rich table output with enhanced formatting
+        table = create_table()
+        add_column_with_ellipsis(table, "Key", style="dim")
+        add_column_with_ellipsis(table, "Name", max_width=50)
+        add_column_with_ellipsis(table, "Type")
+        add_column_with_ellipsis(table, "Status")
 
         for space in spaces:
             key = space.get("key", "")
@@ -75,7 +79,10 @@ def list_spaces(
             space_type = space.get("type", "")
             status = space.get("status", "")
 
-            table.add_row(key, name, space_type, status)
+            # Apply color coding to status
+            status_formatted = colorize_status(status)
+
+            table.add_row(key, name, space_type, status_formatted)
 
         console.print(table)
 

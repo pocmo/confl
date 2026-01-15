@@ -5,10 +5,10 @@ import sys
 
 import typer
 from rich.console import Console
-from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.cql import build_cql_query
+from confl.table_formatter import add_column_with_ellipsis, create_table
 
 console = Console()
 err_console = Console(stderr=True)
@@ -89,12 +89,12 @@ def search_command(
     if json_output:
         print(json.dumps(results, indent=2))
     else:
-        # Rich table output
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("Type", style="dim")
-        table.add_column("ID", style="dim")
-        table.add_column("Title")
-        table.add_column("Space")
+        # Rich table output with enhanced formatting
+        table = create_table()
+        add_column_with_ellipsis(table, "Type", style="dim")
+        add_column_with_ellipsis(table, "ID", style="dim")
+        add_column_with_ellipsis(table, "Title", max_width=60)
+        add_column_with_ellipsis(table, "Space")
 
         for result in results:
             # v1 API response structure
