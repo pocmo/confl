@@ -443,6 +443,14 @@ class TestListPages:
 
     def test_list_pages_basic(self, httpx_mock: HTTPXMock, mock_config_env):
         """Test basic page listing with space filter."""
+        # Mock space lookup
+        space_data = {"id": "98765", "key": "DEV", "name": "Development", "type": "global"}
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
         pages_data = {
             "results": [
                 {
@@ -477,6 +485,14 @@ class TestListPages:
 
     def test_list_pages_json_output(self, httpx_mock: HTTPXMock, mock_config_env):
         """Test JSON output format."""
+        # Mock space lookup
+        space_data = {"id": "98765", "key": "DEV", "name": "Development", "type": "global"}
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
         pages_data = {
             "results": [
                 {
@@ -505,6 +521,14 @@ class TestListPages:
 
     def test_list_pages_custom_limit(self, httpx_mock: HTTPXMock, mock_config_env):
         """Test custom limit parameter."""
+        # Mock space lookup
+        space_data = {"id": "98765", "key": "DEV", "name": "Development", "type": "global"}
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
         pages_data = {"results": []}
 
         httpx_mock.add_response(
@@ -518,6 +542,14 @@ class TestListPages:
 
     def test_list_pages_empty_results(self, httpx_mock: HTTPXMock, mock_config_env):
         """Test handling of empty results."""
+        # Mock space lookup
+        space_data = {"id": "98765", "key": "EMPTY", "name": "Empty Space", "type": "global"}
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=EMPTY",
+            method="GET",
+            json={"results": [space_data]},
+        )
+
         pages_data = {"results": []}
 
         httpx_mock.add_response(
@@ -532,8 +564,9 @@ class TestListPages:
 
     def test_list_pages_unauthorized(self, httpx_mock: HTTPXMock, mock_config_env):
         """Test handling of 401 unauthorized error."""
+        # Mock space lookup - also returns 401
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages?limit=25&space-key=DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
             method="GET",
             status_code=401,
             json={"message": "Unauthorized"},
@@ -545,8 +578,9 @@ class TestListPages:
 
     def test_list_pages_forbidden(self, httpx_mock: HTTPXMock, mock_config_env):
         """Test handling of 403 forbidden error."""
+        # Mock space lookup - also returns 403
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/pages?limit=25&space-key=PRIVATE",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=PRIVATE",
             method="GET",
             status_code=403,
             json={"message": "Forbidden"},
@@ -561,6 +595,19 @@ class TestListPages:
         result = runner.invoke(app, ["page", "list"])
         assert result.exit_code != 0
         # Typer will complain about missing required option
+
+    def test_list_pages_invalid_space(self, httpx_mock: HTTPXMock, mock_config_env):
+        """Test handling of invalid/non-existent space key."""
+        # Mock space lookup that returns empty results (space not found)
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=INVALID",
+            method="GET",
+            json={"results": []},
+        )
+
+        result = runner.invoke(app, ["page", "list", "--space", "INVALID"])
+        assert result.exit_code == 1
+        assert "Space not found: INVALID" in result.stderr
 
 
 class TestPageDeleteCommand:

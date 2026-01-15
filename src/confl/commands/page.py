@@ -136,6 +136,10 @@ def list_pages(
     try:
         client = get_client()
         confluence = ConfluenceClient(client)
+
+        # Validate that space exists before listing pages
+        confluence.get_space_by_key(space)
+
         pages = confluence.list_pages(space_key=space, limit=limit)
     except ApiError as e:
         if json_output and e.response_data:
