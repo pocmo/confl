@@ -109,6 +109,38 @@ email = "dev@example.com"
 token = "dev-token"
 ```
 
+## Global Options
+
+### Verbose and Debug Modes
+
+`confl` supports global flags for troubleshooting and getting detailed information about operations:
+
+```bash
+# Show detailed operation information
+confl --verbose page get 12345678
+confl -v page list
+
+# Show debug information including HTTP requests/responses
+confl --debug page create "Test Page"
+
+# Combine with other commands
+confl --debug auth status
+```
+
+**`--verbose` / `-v`**: Shows detailed operation information. Useful for understanding what the CLI is doing.
+
+**`--debug`**: Shows debug-level logging including:
+- HTTP request methods and URLs
+- Request and response headers (auth tokens masked)
+- Request and response bodies (truncated for large responses)
+- Full stack traces for errors
+
+These flags work with all commands and are particularly helpful when:
+- Troubleshooting API issues
+- Debugging authentication problems
+- Understanding rate limiting or timeout errors
+- Filing bug reports (include `--debug` output)
+
 ## Installation
 
 ```

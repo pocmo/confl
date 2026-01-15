@@ -5,6 +5,7 @@ Most functionality uses v2 API, but some features (like search) require v1.
 """
 
 import base64
+import logging
 import sys
 from typing import Any, cast
 
@@ -14,6 +15,41 @@ from rich.console import Console
 from confl.config import Config, ConfigError, get_config
 
 console = Console(stderr=True)
+logger = logging.getLogger(__name__)
+
+
+def log_request(request: httpx.Request) -> None:
+    """Log HTTP request details when debug mode is enabled."""
+    logger.debug(f"HTTP Request: {request.method} {request.url}")
+    if logger.isEnabledFor(logging.DEBUG):
+        # Only format headers if we're actually logging
+        headers = dict(request.headers)
+        # Mask authorization header for security
+        if "authorization" in headers:
+            headers["authorization"] = "***MASKED***"
+        logger.debug(f"  Headers: {headers}")
+        if request.content:
+            logger.debug(f"  Body: {request.content.decode('utf-8', errors='replace')}")
+
+
+def log_response(response: httpx.Response) -> None:
+    """Log HTTP response details when debug mode is enabled."""
+    logger.debug(
+        f"HTTP Response: {response.status_code} {response.reason_phrase} "
+        f"({len(response.content)} bytes)"
+    )
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"  Headers: {dict(response.headers)}")
+        # Only log response body for non-binary content
+        content_type = response.headers.get("content-type", "")
+        if "json" in content_type or "text" in content_type:
+            try:
+                body = response.text[:1000]  # Limit to first 1000 chars
+                if len(response.text) > 1000:
+                    body += "... (truncated)"
+                logger.debug(f"  Body: {body}")
+            except Exception:
+                logger.debug("  Body: (unable to decode)")
 
 
 class ApiError(Exception):
@@ -76,19 +112,38 @@ def create_client(config: Config) -> httpx.Client:
     Returns:
         Configured httpx.Client for v2 API
     """
+    # Import here to avoid circular dependency
+    from confl.cli import is_debug
+
     # Encode credentials for Basic auth
     credentials = f"{config.email}:{config.token}"
     encoded = base64.b64encode(credentials.encode()).decode()
 
-    return httpx.Client(
-        base_url=f"https://{config.site}/wiki/api/v2",
-        headers={
-            "Authorization": f"Basic {encoded}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
-        timeout=30.0,
-    )
+    # Add event hooks for debug logging if debug mode is enabled
+    if is_debug():
+        return httpx.Client(
+            base_url=f"https://{config.site}/wiki/api/v2",
+            headers={
+                "Authorization": f"Basic {encoded}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            timeout=30.0,
+            event_hooks={
+                "request": [log_request],
+                "response": [log_response],
+            },
+        )
+    else:
+        return httpx.Client(
+            base_url=f"https://{config.site}/wiki/api/v2",
+            headers={
+                "Authorization": f"Basic {encoded}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            timeout=30.0,
+        )
 
 
 def get_v1_client() -> httpx.Client:
@@ -119,19 +174,38 @@ def create_v1_client(config: Config) -> httpx.Client:
     Returns:
         Configured httpx.Client for v1 API
     """
+    # Import here to avoid circular dependency
+    from confl.cli import is_debug
+
     # Encode credentials for Basic auth
     credentials = f"{config.email}:{config.token}"
     encoded = base64.b64encode(credentials.encode()).decode()
 
-    return httpx.Client(
-        base_url=f"https://{config.site}/wiki/rest/api",
-        headers={
-            "Authorization": f"Basic {encoded}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
-        timeout=30.0,
-    )
+    # Add event hooks for debug logging if debug mode is enabled
+    if is_debug():
+        return httpx.Client(
+            base_url=f"https://{config.site}/wiki/rest/api",
+            headers={
+                "Authorization": f"Basic {encoded}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            timeout=30.0,
+            event_hooks={
+                "request": [log_request],
+                "response": [log_response],
+            },
+        )
+    else:
+        return httpx.Client(
+            base_url=f"https://{config.site}/wiki/rest/api",
+            headers={
+                "Authorization": f"Basic {encoded}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            timeout=30.0,
+        )
 
 
 def handle_api_error(response: httpx.Response) -> None:
