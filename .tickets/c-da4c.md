@@ -1,6 +1,6 @@
 ---
 id: c-da4c
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T07:44:32Z
@@ -97,3 +97,50 @@ This is a DISCOVERY ticket. Research, document, file follow-ups, then STOP. Do n
 **2026-01-15T07:44:49Z**
 
 NOTE: This ticket revisits OAuth implementation. Previous discovery ticket c-2b89 concluded OAuth was not recommended due to lack of device flow and complexity. This ticket should specifically focus on the dynamic client registration question and compare with how gh/gcloud/acli actually implement it. If findings differ from c-2b89, document why the recommendation should change.
+
+**2026-01-15T07:51:05Z**
+
+DISCOVERY COMPLETE
+
+## Key Findings
+
+1. **Dynamic Client Registration**: NOT supported by Confluence Cloud
+2. **PKCE Support**: YES - Confluence supports Authorization Code + PKCE
+3. **Device Flow**: NOT supported - only Authorization Code flow available
+4. **How other CLIs work**:
+   - gh: Device Flow (no browser in headless)
+   - gcloud: Auth Code + PKCE, embedded Google-managed client_id
+   - acli: Auth Code + PKCE, embedded Atlassian-managed OAuth app
+
+## Recommendation
+
+OAuth browser login is **technically feasible** with PKCE but **NOT essential** for MVP.
+
+**Recommended approach**: Phased implementation
+- **Phase 1 (now)**: Keep API token authentication (simple, works everywhere)
+- **Phase 2 (later)**: Add OAuth when project matures and hosting app is viable
+
+## Why Wait
+
+- API tokens work fine for CLI use case (like AWS, Terraform, Docker)
+- OAuth adds complexity: local server, token refresh, error handling
+- Requires infrastructure: Someone must host OAuth app (like acli does)
+- Doesn't work in headless environments anyway (no device flow)
+
+## Documentation
+
+Complete findings documented in:
+**docs/architecture/oauth-browser-login.md**
+
+Covers:
+- All questions answered with sources
+- Comparison of gh/gcloud/acli approaches  
+- PKCE implementation details
+- Python libraries (authlib recommended)
+- Security considerations
+- Implementation architecture when ready
+- Code examples for future reference
+
+## Conclusion
+
+OAuth is nice-to-have, not must-have. Current API token approach is sufficient and follows industry patterns (AWS CLI, Terraform, etc.). Revisit OAuth when project has proven adoption and stable ownership for hosting OAuth app.
