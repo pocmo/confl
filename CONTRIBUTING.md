@@ -2,7 +2,7 @@
 
 ## 🤖 Developed by Ralph
 
-This project is **completely vibe coded by Ralph**, an autonomous loop agent. Ralph works in iterations: it reads tickets from our issue tracker ([`tk`](.tickets/)), implements one feature at a time, runs tests, commits changes, and moves to the next ticket. The entire codebase you see here was written autonomously by AI agents following architecture docs and best practices—no human wrote a single line of the implementation code.
+This project is **completely vibe coded by Ralph**, an autonomous loop agent. Ralph works in iterations: it reads tickets from our issue tracker using [tk](https://github.com/wedow/ticket) (a minimal ticket system stored in [`.tickets/`](.tickets/)), implements one feature at a time, runs tests, commits changes, and moves to the next ticket. The entire codebase you see here was written autonomously by AI agents following architecture docs and best practices—no human wrote a single line of the implementation code.
 
 Want to understand how this works? Check out the [`.ralph/`](.ralph/) directory for the agent implementation and handoff logs, or read [**The Year of the Ralph Loop Agent**](https://dev.to/alexandergekov/2026-the-year-of-the-ralph-loop-agent-1gkj) for a deep dive into this development approach.
 
@@ -66,7 +66,7 @@ confl/
 ├── docs/            # User documentation and architecture decisions
 │   └── architecture/  # Architecture decision records and design docs
 ├── .ralph/          # Ralph agent loop implementation and handoff logs
-├── .tickets/        # Ticket system (tk) - task tracking
+├── .tickets/        # tk ticket system - managed by https://github.com/wedow/ticket
 └── pyproject.toml   # Project configuration and dependencies
 ```
 
@@ -74,7 +74,7 @@ The codebase is organized for clarity:
 - **src/confl/** contains all application code: CLI entry point, API client, command modules, and output formatters
 - **tests/** mirrors the src/ structure for easy navigation
 - **docs/** includes both user-facing guides and architecture documentation
-- **.ralph/** and **.tickets/** support autonomous development workflows
+- **.ralph/** and **.tickets/** support autonomous development workflows (using [tk](https://github.com/wedow/ticket), a minimal ticket system)
 
 ## Running Tests
 
