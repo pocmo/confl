@@ -224,10 +224,7 @@ def add_comment(
             sys.exit(1)
 
         # Get body content
-        if body_file:
-            body_text = Path(body_file).read_text()
-        else:
-            body_text = body or ""
+        body_text = Path(body_file).read_text() if body_file else body or ""
 
         # Convert markdown to storage format
         storage_body = markdown_to_storage(body_text)
@@ -312,10 +309,7 @@ def update_comment(
             sys.exit(1)
 
         # Get body content
-        if body_file:
-            body_text = Path(body_file).read_text()
-        else:
-            body_text = body or ""
+        body_text = Path(body_file).read_text() if body_file else body or ""
 
         # Convert markdown to storage format
         storage_body = markdown_to_storage(body_text)
@@ -391,10 +385,14 @@ def delete_comment(
         return
 
     # Confirmation prompt (skip if --yes or not a TTY)
-    if not yes and sys.stdin.isatty() and not json_output:
-        if not typer.confirm(f"Are you sure you want to delete comment {comment_id}?"):
-            console.print("[yellow]Cancelled[/yellow]")
-            return
+    if (
+        not yes
+        and sys.stdin.isatty()
+        and not json_output
+        and not typer.confirm(f"Are you sure you want to delete comment {comment_id}?")
+    ):
+        console.print("[yellow]Cancelled[/yellow]")
+        return
 
     try:
         client = get_client()

@@ -312,10 +312,14 @@ def delete_attachment(
         return
 
     # Confirmation prompt (skip if --yes or not a TTY)
-    if not yes and sys.stdin.isatty() and not json_output:
-        if not typer.confirm(f"Are you sure you want to delete attachment {attachment_id}?"):
-            console.print("[yellow]Cancelled[/yellow]")
-            return
+    if (
+        not yes
+        and sys.stdin.isatty()
+        and not json_output
+        and not typer.confirm(f"Are you sure you want to delete attachment {attachment_id}?")
+    ):
+        console.print("[yellow]Cancelled[/yellow]")
+        return
 
     try:
         client = get_client()
