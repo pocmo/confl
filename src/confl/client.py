@@ -13,6 +13,7 @@ import httpx
 from rich.console import Console
 
 from confl.config import Config, ConfigError, get_config
+from confl.context import ExecutionContext
 
 console = Console(stderr=True)
 logger = logging.getLogger(__name__)
@@ -74,11 +75,14 @@ class ApiError(Exception):
         self.response_data = response_data
 
 
-def get_client(profile: str | None = None) -> httpx.Client:
+def get_client(context: ExecutionContext | None = None, profile: str | None = None) -> httpx.Client:
     """Get configured httpx client for Confluence API.
 
     Args:
-        profile: Configuration profile to use. If None, uses default or CONFL_PROFILE.
+        context: Execution context containing profile and debug settings.
+                If None, gets context from CLI layer.
+        profile: Configuration profile to use. If None, uses profile from context
+                or default from CONFL_PROFILE.
 
     Returns:
         Configured httpx.Client ready for API calls
@@ -87,12 +91,15 @@ def get_client(profile: str | None = None) -> httpx.Client:
         ConfigError: If configuration is invalid or missing
         SystemExit: Exits with code 2 if configuration cannot be loaded
     """
-    # Import here to avoid circular dependency
-    from confl.cli import get_profile
+    if context is None:
+        # Import here to get CLI context without creating circular dependency at module level
+        from confl.cli import get_context
 
-    # Use profile from CLI context if not explicitly provided
+        context = get_context()
+
+    # Use profile from parameter, then context, then None for default
     if profile is None:
-        profile = get_profile()
+        profile = context.profile
 
     try:
         config = get_config(profile)
@@ -100,27 +107,28 @@ def get_client(profile: str | None = None) -> httpx.Client:
         console.print(f"[red]Error:[/red] {e}", style="red")
         sys.exit(2)
 
-    return create_client(config)
+    return create_client(config, context)
 
 
-def create_client(config: Config) -> httpx.Client:
+def create_client(config: Config, context: ExecutionContext | None = None) -> httpx.Client:
     """Create httpx client with the given configuration for API v2.
 
     Args:
         config: Configuration with site, email, and token
+        context: Execution context with debug flag. If None, creates default context.
 
     Returns:
         Configured httpx.Client for v2 API
     """
-    # Import here to avoid circular dependency
-    from confl.cli import is_debug
+    if context is None:
+        context = ExecutionContext()
 
     # Encode credentials for Basic auth
     credentials = f"{config.email}:{config.token}"
     encoded = base64.b64encode(credentials.encode()).decode()
 
     # Add event hooks for debug logging if debug mode is enabled
-    if is_debug():
+    if context.debug:
         return httpx.Client(
             base_url=f"https://{config.site}/wiki/api/v2",
             headers={
@@ -146,8 +154,11 @@ def create_client(config: Config) -> httpx.Client:
         )
 
 
-def get_v1_client() -> httpx.Client:
+def get_v1_client(context: ExecutionContext | None = None) -> httpx.Client:
     """Get configured httpx client for Confluence API v1.
+
+    Args:
+        context: Execution context with debug flag. If None, gets context from CLI layer.
 
     Returns:
         Configured httpx.Client ready for v1 API calls
@@ -156,33 +167,40 @@ def get_v1_client() -> httpx.Client:
         ConfigError: If configuration is invalid or missing
         SystemExit: Exits with code 2 if configuration cannot be loaded
     """
+    if context is None:
+        # Import here to get CLI context without creating circular dependency at module level
+        from confl.cli import get_context
+
+        context = get_context()
+
     try:
-        config = get_config()
+        config = get_config(context.profile)
     except ConfigError as e:
         console.print(f"[red]Error:[/red] {e}", style="red")
         sys.exit(2)
 
-    return create_v1_client(config)
+    return create_v1_client(config, context)
 
 
-def create_v1_client(config: Config) -> httpx.Client:
+def create_v1_client(config: Config, context: ExecutionContext | None = None) -> httpx.Client:
     """Create httpx client with the given configuration for API v1.
 
     Args:
         config: Configuration with site, email, and token
+        context: Execution context with debug flag. If None, creates default context.
 
     Returns:
         Configured httpx.Client for v1 API
     """
-    # Import here to avoid circular dependency
-    from confl.cli import is_debug
+    if context is None:
+        context = ExecutionContext()
 
     # Encode credentials for Basic auth
     credentials = f"{config.email}:{config.token}"
     encoded = base64.b64encode(credentials.encode()).decode()
 
     # Add event hooks for debug logging if debug mode is enabled
-    if is_debug():
+    if context.debug:
         return httpx.Client(
             base_url=f"https://{config.site}/wiki/rest/api",
             headers={

@@ -5,6 +5,7 @@ import logging
 import typer
 
 from confl.commands import attachment, auth, blogpost, comment, label, page, search, space
+from confl.context import ExecutionContext
 
 app = typer.Typer(
     name="confl",
@@ -24,25 +25,29 @@ app.add_typer(blogpost.app, name="blogpost")
 # Register direct commands
 app.command(name="search")(search.search_command)
 
-# Global context
-_profile: str | None = None
-_verbose: bool = False
-_debug: bool = False
+# Global execution context
+_context = ExecutionContext()
 
 
+def get_context() -> ExecutionContext:
+    """Get the current execution context."""
+    return _context
+
+
+# Deprecated: Use get_context() instead
 def get_profile() -> str | None:
     """Get the current profile name."""
-    return _profile
+    return _context.profile
 
 
 def is_verbose() -> bool:
     """Check if verbose mode is enabled."""
-    return _verbose
+    return _context.verbose
 
 
 def is_debug() -> bool:
     """Check if debug mode is enabled."""
-    return _debug
+    return _context.debug
 
 
 @app.callback()
@@ -65,10 +70,12 @@ def main(
     ),
 ) -> None:
     """An unofficial CLI for Atlassian Confluence Cloud."""
-    global _profile, _verbose, _debug
-    _profile = profile
-    _verbose = verbose
-    _debug = debug
+    global _context
+    _context = ExecutionContext(
+        profile=profile,
+        verbose=verbose,
+        debug=debug,
+    )
 
     # Configure logging based on flags
     if debug:

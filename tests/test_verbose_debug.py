@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 from confl.cli import app
 from confl.client import create_client, create_v1_client, log_request, log_response
 from confl.config import Config
+from confl.context import ExecutionContext
 
 runner = CliRunner()
 
@@ -53,37 +54,37 @@ def test_debug_implies_verbose():
 
 def test_client_has_event_hooks_in_debug_mode(mock_config):
     """Test that HTTP client has event hooks when debug mode is enabled."""
-    with patch("confl.cli.is_debug", return_value=True):
-        client = create_client(mock_config)
-        assert "request" in client.event_hooks
-        assert "response" in client.event_hooks
-        assert log_request in client.event_hooks["request"]
-        assert log_response in client.event_hooks["response"]
+    context = ExecutionContext(debug=True)
+    client = create_client(mock_config, context)
+    assert "request" in client.event_hooks
+    assert "response" in client.event_hooks
+    assert log_request in client.event_hooks["request"]
+    assert log_response in client.event_hooks["response"]
 
 
 def test_client_no_event_hooks_without_debug(mock_config):
     """Test that HTTP client has no event hooks when debug is disabled."""
-    with patch("confl.cli.is_debug", return_value=False):
-        client = create_client(mock_config)
-        # Event hooks dict may be empty or not contain our hooks
-        assert log_request not in client.event_hooks.get("request", [])
-        assert log_response not in client.event_hooks.get("response", [])
+    context = ExecutionContext(debug=False)
+    client = create_client(mock_config, context)
+    # Event hooks dict may be empty or not contain our hooks
+    assert log_request not in client.event_hooks.get("request", [])
+    assert log_response not in client.event_hooks.get("response", [])
 
 
 def test_v1_client_has_event_hooks_in_debug_mode(mock_config):
     """Test that v1 client has event hooks when debug mode is enabled."""
-    with patch("confl.cli.is_debug", return_value=True):
-        client = create_v1_client(mock_config)
-        assert "request" in client.event_hooks
-        assert "response" in client.event_hooks
+    context = ExecutionContext(debug=True)
+    client = create_v1_client(mock_config, context)
+    assert "request" in client.event_hooks
+    assert "response" in client.event_hooks
 
 
 def test_v1_client_no_event_hooks_without_debug(mock_config):
     """Test that v1 client has no event hooks when debug is disabled."""
-    with patch("confl.cli.is_debug", return_value=False):
-        client = create_v1_client(mock_config)
-        assert log_request not in client.event_hooks.get("request", [])
-        assert log_response not in client.event_hooks.get("response", [])
+    context = ExecutionContext(debug=False)
+    client = create_v1_client(mock_config, context)
+    assert log_request not in client.event_hooks.get("request", [])
+    assert log_response not in client.event_hooks.get("response", [])
 
 
 def test_log_request_masks_authorization():

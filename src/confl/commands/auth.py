@@ -65,10 +65,10 @@ def status(
     output: dict[str, Any]
 
     # Import here to use CLI context profile if not explicitly provided
-    from confl.cli import get_profile
+    from confl.cli import get_context
 
     if profile is None:
-        profile = get_profile()
+        profile = get_context().profile
 
     auth_source = _get_auth_source(profile)
 
