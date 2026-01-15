@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
+from confl.formatters import format_file_size
 
 app = typer.Typer(help="Manage attachments")
 console = Console()
@@ -79,14 +80,7 @@ def list_attachments(
             title = attachment.get("title", "Untitled")
             media_type = attachment.get("mediaType", "")
             file_size = attachment.get("fileSize", 0)
-
-            # Format file size
-            if file_size < 1024:
-                size_str = f"{file_size} B"
-            elif file_size < 1024 * 1024:
-                size_str = f"{file_size / 1024:.1f} KB"
-            else:
-                size_str = f"{file_size / (1024 * 1024):.1f} MB"
+            size_str = format_file_size(file_size)
 
             table.add_row(att_id, title, media_type, size_str)
 
@@ -128,12 +122,7 @@ def get_attachment(
         console.print(f"[bold cyan]Media Type:[/bold cyan] {attachment.get('mediaType', '')}")
 
         file_size = attachment.get("fileSize", 0)
-        if file_size < 1024:
-            size_str = f"{file_size} B"
-        elif file_size < 1024 * 1024:
-            size_str = f"{file_size / 1024:.1f} KB"
-        else:
-            size_str = f"{file_size / (1024 * 1024):.1f} MB"
+        size_str = format_file_size(file_size)
         console.print(f"[bold cyan]File Size:[/bold cyan] {size_str}")
 
         if "webuiLink" in attachment:
@@ -185,13 +174,7 @@ def download_attachment(
 
         # Show success message
         file_size = len(content)
-        if file_size < 1024:
-            size_str = f"{file_size} B"
-        elif file_size < 1024 * 1024:
-            size_str = f"{file_size / 1024:.1f} KB"
-        else:
-            size_str = f"{file_size / (1024 * 1024):.1f} MB"
-
+        size_str = format_file_size(file_size)
         console.print(f"[green]Downloaded {size_str} to {output_path}[/green]")
 
     except ApiError as e:

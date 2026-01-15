@@ -13,6 +13,7 @@ from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
+from confl.formatters import format_relative_time
 
 app = typer.Typer(help="Manage pages")
 console = Console()
@@ -79,10 +80,9 @@ def _format_page_metadata(page: dict[str, Any]) -> str:
 
     # Updated timestamp
     if "createdAt" in version:
-        # Extract just the date portion (YYYY-MM-DD)
         timestamp = version["createdAt"]
-        date = timestamp.split("T")[0] if "T" in timestamp else timestamp
-        lines.append(f"Updated: {date}")
+        relative_time = format_relative_time(timestamp)
+        lines.append(f"Updated: {relative_time}")
 
     lines.append("---")
     return "\n".join(lines)
@@ -288,7 +288,7 @@ def list_pages(
             version = page.get("version", {})
             if "createdAt" in version:
                 timestamp = version["createdAt"]
-                updated = timestamp.split("T")[0] if "T" in timestamp else timestamp
+                updated = format_relative_time(timestamp)
 
             table.add_row(page_id, title, space_id, updated)
 

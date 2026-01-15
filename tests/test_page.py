@@ -472,8 +472,8 @@ class TestListPages:
         assert "First Page" in result.stdout
         assert "87654321" in result.stdout
         assert "Second Page" in result.stdout
-        assert "2026-01-10" in result.stdout
-        assert "2026-01-12" in result.stdout
+        # Timestamps are now shown as relative time (e.g., "4 days ago")
+        assert "ago" in result.stdout or "just now" in result.stdout
 
     def test_list_pages_json_output(self, httpx_mock: HTTPXMock, mock_config_env):
         """Test JSON output format."""

@@ -11,6 +11,7 @@ from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
+from confl.formatters import format_relative_time
 
 app = typer.Typer(help="Manage comments")
 console = Console()
@@ -125,9 +126,9 @@ def list_comments(
 
             # Get creation date
             created_at = comment.get("createdAt", "")
-            created_date = created_at.split("T")[0] if "T" in created_at else created_at
+            created_relative = format_relative_time(created_at) if created_at else ""
 
-            table.add_row(comment_id, comment_type, body_preview, author_id, created_date)
+            table.add_row(comment_id, comment_type, body_preview, author_id, created_relative)
 
         console.print(table)
 

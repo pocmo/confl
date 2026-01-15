@@ -13,6 +13,7 @@ from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
 from confl.converter import markdown_to_storage, storage_to_markdown
+from confl.formatters import format_relative_time
 
 app = typer.Typer(help="Manage blog posts")
 console = Console()
@@ -82,10 +83,9 @@ def _format_blogpost_metadata(blogpost: dict[str, Any]) -> str:
 
     # Updated timestamp
     if "createdAt" in version:
-        # Extract just the date portion (YYYY-MM-DD)
         timestamp = version["createdAt"]
-        date = timestamp.split("T")[0] if "T" in timestamp else timestamp
-        lines.append(f"Published: {date}")
+        relative_time = format_relative_time(timestamp)
+        lines.append(f"Published: {relative_time}")
 
     lines.append("---")
     return "\n".join(lines)
@@ -308,7 +308,7 @@ def list_blogposts(
             version = blogpost.get("version", {})
             if "createdAt" in version:
                 timestamp = version["createdAt"]
-                published = timestamp.split("T")[0] if "T" in timestamp else timestamp
+                published = format_relative_time(timestamp)
 
             table.add_row(blogpost_id, title, space_id, published)
 
