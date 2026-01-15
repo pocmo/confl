@@ -1061,3 +1061,155 @@ class TestSpaceSearchCommand:
         assert result.exit_code == 0
         assert "Test & Development" in result.stdout
         assert "&amp;" not in result.stdout
+
+
+class TestSpaceWhoamiCommand:
+    """Tests for 'confl space whoami' command."""
+
+    def test_whoami_with_personal_space(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test whoami when user has a personal space."""
+        user_data = {
+            "accountId": "user123",
+            "displayName": "Test User",
+            "email": "test@example.com",
+        }
+
+        spaces_data = {
+            "results": [
+                {
+                    "id": "789",
+                    "key": "~user123",
+                    "name": "Test User",
+                    "type": "personal",
+                    "status": "current",
+                    "authorId": "user123",
+                    "homepageId": "456",
+                    "_links": {"webui": "https://example.atlassian.net/wiki/spaces/~user123"},
+                }
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            method="GET",
+            json=user_data,
+        )
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=personal",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "whoami"])
+        assert result.exit_code == 0
+        assert "~user123" in result.stdout
+        assert "Test User" in result.stdout
+        assert "789" in result.stdout
+        assert "personal" in result.stdout
+
+    def test_whoami_json_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test whoami with JSON output."""
+        user_data = {
+            "accountId": "user123",
+            "displayName": "Test User",
+        }
+
+        spaces_data = {
+            "results": [
+                {
+                    "id": "789",
+                    "key": "~user123",
+                    "name": "Test User",
+                    "type": "personal",
+                    "status": "current",
+                    "authorId": "user123",
+                }
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            method="GET",
+            json=user_data,
+        )
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=personal",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "whoami", "--json"])
+        assert result.exit_code == 0
+        output = json.loads(result.stdout)
+        assert output["accountId"] == "user123"
+        assert output["displayName"] == "Test User"
+        assert output["personalSpace"]["key"] == "~user123"
+        assert output["personalSpace"]["id"] == "789"
+
+    def test_whoami_no_personal_space(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test whoami when user has no personal space."""
+        user_data = {
+            "accountId": "user456",
+            "displayName": "New User",
+        }
+
+        spaces_data = {
+            "results": [
+                {
+                    "id": "999",
+                    "key": "~otheruser",
+                    "name": "Other User",
+                    "type": "personal",
+                    "status": "current",
+                    "authorId": "otheruser123",
+                }
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            method="GET",
+            json=user_data,
+        )
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=personal",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "whoami"])
+        assert result.exit_code == 0
+        assert "No personal space found" in result.stdout
+        assert "user456" in result.stdout
+
+    def test_whoami_no_personal_space_json(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test whoami with JSON output when user has no personal space."""
+        user_data = {
+            "accountId": "user456",
+            "displayName": "New User",
+        }
+
+        spaces_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            method="GET",
+            json=user_data,
+        )
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=personal",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "whoami", "--json"])
+        assert result.exit_code == 0
+        output = json.loads(result.stdout)
+        assert output["accountId"] == "user456"
+        assert output["personalSpace"] is None

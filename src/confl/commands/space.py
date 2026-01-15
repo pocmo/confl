@@ -402,6 +402,90 @@ def search_spaces(
             console.print(f"\n[dim]Found {len(spaces)} space(s)[/dim]")
 
 
+@app.command("whoami")
+def whoami(
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Show current user's personal space.
+
+    Displays the personal space key, name, ID, and other details for the authenticated user.
+    Useful for discovering your personal space key (e.g., ~username or ~accountId).
+
+    Examples:
+        confl space whoami
+        confl space whoami --json
+    """
+    try:
+        client = get_client()
+        confluence = ConfluenceClient(client)
+
+        # Get current user info
+        user = confluence.get_current_user()
+        account_id = user.get("accountId")
+
+        if not account_id:
+            err_console.print("[red]Error:[/red] Could not determine current user account ID")
+            sys.exit(1)
+
+        # Search for personal space owned by this user
+        # Personal spaces have type=personal and authorId matching the user's accountId
+        spaces = confluence.list_spaces(type_filter="personal", limit=None)
+
+        # Filter to find the space owned by current user
+        personal_space = None
+        for space in spaces:
+            if space.get("authorId") == account_id:
+                personal_space = space
+                break
+
+        if not personal_space:
+            if json_output:
+                result = {
+                    "accountId": account_id,
+                    "displayName": user.get("displayName"),
+                    "personalSpace": None,
+                }
+                print(json.dumps(result, indent=2))
+            else:
+                console.print("[yellow]No personal space found for current user.[/yellow]")
+                console.print(f"Account ID: {account_id}")
+                if "displayName" in user:
+                    console.print(f"Display Name: {user['displayName']}")
+            return
+
+        # Output based on flags
+        if json_output:
+            result = {
+                "accountId": account_id,
+                "displayName": user.get("displayName"),
+                "personalSpace": personal_space,
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            # Rich formatted output
+            console.print(f"[bold]Space Key:[/bold] {personal_space.get('key', '')}")
+            console.print(f"[bold]Space Name:[/bold] {personal_space.get('name', 'Unnamed')}")
+            console.print(f"[bold]Space ID:[/bold] {personal_space.get('id', '')}")
+            console.print(f"[bold]Type:[/bold] {personal_space.get('type', '')}")
+            console.print(f"[bold]Status:[/bold] {personal_space.get('status', '')}")
+
+            if "homepageId" in personal_space:
+                console.print(f"[bold]Homepage ID:[/bold] {personal_space['homepageId']}")
+
+            # Display links if available
+            if "_links" in personal_space:
+                links = personal_space["_links"]
+                if "webui" in links:
+                    console.print(f"[bold]URL:[/bold] {links['webui']}")
+
+    except ApiError as e:
+        if json_output and e.response_data:
+            print(json.dumps(e.response_data, indent=2), file=sys.stderr)
+        else:
+            err_console.print(f"[red]Error:[/red] {e.message}")
+        sys.exit(1)
+
+
 @app.command("delete")
 def delete_space(
     ref: str = typer.Argument(..., help="Space key or ID"),
