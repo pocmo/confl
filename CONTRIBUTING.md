@@ -1,5 +1,15 @@
 # Contributing to confl
 
+## 🤖 Developed by Ralph
+
+This project is **completely vibe coded by Ralph**, an autonomous loop agent. Ralph works in iterations: it reads tickets from our issue tracker ([`tk`](.tickets/)), implements one feature at a time, runs tests, commits changes, and moves to the next ticket. The entire codebase you see here was written autonomously by AI agents following architecture docs and best practices—no human wrote a single line of the implementation code.
+
+Want to understand how this works? Check out the [`.ralph/`](.ralph/) directory for the agent implementation and handoff logs, or read [**The Year of the Ralph Loop Agent**](https://dev.to/alexandergekov/2026-the-year-of-the-ralph-loop-agent-1gkj) for a deep dive into this development approach.
+
+**Human contributions are welcome!** While Ralph does the day-to-day development, we're happy to accept PRs, bug reports, and feature requests. Ralph will review and integrate them in future iterations.
+
+---
+
 Thank you for your interest in contributing to `confl`! This guide will help you get started with development.
 
 ## Quick Start
