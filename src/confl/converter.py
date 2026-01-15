@@ -285,7 +285,8 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
                 inner_md = self.process_tag(rich_body, **options)  # type: ignore[attr-defined]
                 # Convert to details/summary HTML (supported in many Markdown renderers)
                 return (
-                    f"<details>\n<summary>{expand_title}</summary>\n\n{inner_md.strip()}\n</details>\n\n"
+                    f"<details>\n<summary>{expand_title}</summary>\n\n"
+                    f"{inner_md.strip()}\n</details>\n\n"
                 )
 
         # Handle table of contents macro
