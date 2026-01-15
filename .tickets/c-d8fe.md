@@ -1,6 +1,6 @@
 ---
 id: c-d8fe
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T08:01:18Z
