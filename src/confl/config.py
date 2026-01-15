@@ -2,8 +2,10 @@
 
 Configuration is loaded from environment variables first, then falls back to
 credentials file. The precedence order is:
-1. Environment variables (CONFL_*)
-2. Credentials file (~/.config/confl/credentials.toml)
+1. CONFL_PROFILE environment variable (selects profile from credentials file)
+2. --profile CLI flag (selects profile from credentials file)
+3. Environment variables (CONFL_*)
+4. Credentials file (~/.config/confl/credentials.toml)
 """
 
 import os
@@ -27,10 +29,14 @@ class ConfigError(Exception):
     pass
 
 
-def get_config() -> Config:
+def get_config(profile: str | None = None) -> Config:
     """Load configuration from environment variables or credentials file.
 
+    Args:
+        profile: Profile name to load. If None, uses CONFL_PROFILE env var or default.
+
     Environment variables take precedence over credentials file:
+    - CONFL_PROFILE: Profile name to use (if not specified via --profile flag)
     - CONFL_SITE: Confluence site (e.g., mycompany.atlassian.net)
     - CONFL_EMAIL: Email associated with API token
     - CONFL_TOKEN: API token for authentication
@@ -45,6 +51,10 @@ def get_config() -> Config:
     Raises:
         ConfigError: If required configuration is missing or invalid
     """
+    # Determine profile to use (CLI flag > env var > default)
+    if profile is None:
+        profile = os.environ.get("CONFL_PROFILE")
+
     # Check which env vars are set
     site_set = "CONFL_SITE" in os.environ
     email_set = "CONFL_EMAIL" in os.environ
@@ -61,10 +71,11 @@ def get_config() -> Config:
 
     # If some env vars are set, merge with credentials file
     if site_set or email_set or token_set:
-        creds = load_credentials()
+        creds = load_credentials(profile)
         if creds is None:
+            profile_msg = f" (profile: {profile})" if profile else ""
             raise ConfigError(
-                "Partial environment configuration requires credentials file.\n\n"
+                f"Partial environment configuration requires credentials file{profile_msg}.\n\n"
                 "You've set some CONFL_* environment variables but not all.\n"
                 "Solution:\n"
                 "  • Set all three: CONFL_SITE, CONFL_EMAIL, CONFL_TOKEN\n"
@@ -81,10 +92,11 @@ def get_config() -> Config:
         return _validate_and_create_config(site, email, token)
 
     # No env vars set, fall back to credentials file only
-    creds = load_credentials()
+    creds = load_credentials(profile)
     if creds is None:
+        profile_msg = f" for profile '{profile}'" if profile else ""
         raise ConfigError(
-            "No configuration found.\n\n"
+            f"No configuration found{profile_msg}.\n\n"
             "To get started:\n"
             "  1. Run: confl auth login\n"
             "  2. Or set environment variables:\n"

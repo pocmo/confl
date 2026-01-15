@@ -28,12 +28,86 @@ See [Authentication](#authentication) and [Configuration](#configuration) for mo
 
 ## Authentication
 
-- **API Token** — for CI/automation (via environment variables or config file)
-- **OAuth** — browser-based login for interactive use
+`confl` uses Confluence API tokens for authentication. You can either:
+
+1. Store credentials in config file using `confl auth login`
+2. Set environment variables (`CONFL_SITE`, `CONFL_EMAIL`, `CONFL_TOKEN`)
+
+To create an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
+
+**Quick setup:**
+
+```bash
+# Store credentials in config file
+echo "$YOUR_API_TOKEN" | confl auth login --token \
+  --site yoursite.atlassian.net \
+  --email you@example.com
+
+# Check authentication status
+confl auth status
+
+# Logout (delete stored credentials)
+confl auth logout
+```
 
 ## Configuration
 
-Config lives in `~/.config/confl/`. Environment variables (`CONFL_*`) can override config file settings.
+### Basic Configuration
+
+Config lives in `~/.config/confl/credentials.toml`. Environment variables (`CONFL_*`) take precedence over the config file.
+
+**Priority order:**
+1. Command-line `--profile` flag
+2. `CONFL_PROFILE` environment variable
+3. Environment variables (`CONFL_SITE`, `CONFL_EMAIL`, `CONFL_TOKEN`)
+4. Credentials file
+
+### Multiple Profiles
+
+You can manage multiple Confluence environments using profiles:
+
+```bash
+# Save credentials for different environments
+echo "$PROD_TOKEN" | confl auth login --token \
+  --site company.atlassian.net \
+  --email you@example.com \
+  --profile prod
+
+echo "$DEV_TOKEN" | confl auth login --token \
+  --site dev.atlassian.net \
+  --email you@example.com \
+  --profile dev
+
+# List all profiles
+confl auth list
+
+# Use a specific profile (three ways)
+confl --profile dev page list         # CLI flag
+export CONFL_PROFILE=dev               # Environment variable
+confl page list
+
+# Check which profile is active
+confl auth status --profile dev
+
+# Delete a specific profile
+confl auth logout --profile dev
+```
+
+**Profile file format:**
+
+```toml
+default_profile = "default"
+
+[profiles.default]
+site = "company.atlassian.net"
+email = "you@example.com"
+token = "your-token"
+
+[profiles.dev]
+site = "dev.atlassian.net"
+email = "dev@example.com"
+token = "dev-token"
+```
 
 ## Installation
 

@@ -38,8 +38,11 @@ class ApiError(Exception):
         self.response_data = response_data
 
 
-def get_client() -> httpx.Client:
+def get_client(profile: str | None = None) -> httpx.Client:
     """Get configured httpx client for Confluence API.
+
+    Args:
+        profile: Configuration profile to use. If None, uses default or CONFL_PROFILE.
 
     Returns:
         Configured httpx.Client ready for API calls
@@ -48,8 +51,15 @@ def get_client() -> httpx.Client:
         ConfigError: If configuration is invalid or missing
         SystemExit: Exits with code 2 if configuration cannot be loaded
     """
+    # Import here to avoid circular dependency
+    from confl.cli import get_profile
+
+    # Use profile from CLI context if not explicitly provided
+    if profile is None:
+        profile = get_profile()
+
     try:
-        config = get_config()
+        config = get_config(profile)
     except ConfigError as e:
         console.print(f"[red]Error:[/red] {e}", style="red")
         sys.exit(2)
