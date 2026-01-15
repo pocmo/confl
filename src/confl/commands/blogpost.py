@@ -39,6 +39,9 @@ def get_blogpost(
 ) -> None:
     """Fetch and display a blog post.
 
+    Note: Images and attachments are not displayed in terminal output.
+    Use --json to see attachment references.
+
     Examples:
         confl blogpost get 12345678
         confl blogpost get "https://company.atlassian.net/wiki/spaces/DEV/blogposts/12345678/Title"

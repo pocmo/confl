@@ -144,6 +144,9 @@ def get_comment(
 ) -> None:
     """Get comment details.
 
+    Note: Images and attachments are not displayed in terminal output.
+    Use --json to see attachment references.
+
     Examples:
         confl comment get 123456
         confl comment get 123456 --markdown

@@ -197,6 +197,7 @@ confl page get 123456 --json
 - Use `--raw` flag to provide content in Confluence storage format directly
 - Deletion moves pages to trash (soft delete) — they can be restored from the web UI
 - Restore creates a new version with the content from the specified version
+- **Images and attachments are not displayed in terminal output** — use `--json` to see attachment references
 
 ---
 
@@ -345,6 +346,7 @@ confl comment get 789012 --json
 - Use `--page` to comment on a page or `--parent` to reply to an existing comment
 - Both footer comments (page-level) and inline comments (location-specific) are supported
 - The `--include-inline` flag includes inline comments in list results
+- **Images and attachments are not displayed in terminal output** — use `--json` to see attachment references
 
 ---
 
@@ -411,6 +413,7 @@ confl blogpost get 654321 --json
 - Deletion moves blog posts to trash (soft delete) - they can be restored from the web UI
 - Use `--raw` flag with create/update to provide content in Confluence storage format directly
 - Blog posts appear in chronological order, making them ideal for release notes, announcements, and updates
+- **Images and attachments are not displayed in terminal output** — use `--json` to see attachment references
 
 ---
 

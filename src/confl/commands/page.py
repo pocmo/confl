@@ -41,6 +41,9 @@ def get_page(
 ) -> None:
     """Fetch and display a page.
 
+    Note: Images and attachments are not displayed in terminal output.
+    Use --json to see attachment references.
+
     Examples:
         confl page get 12345678
         confl page get "https://company.atlassian.net/wiki/spaces/DEV/pages/12345678/Title"
