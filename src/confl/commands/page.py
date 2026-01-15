@@ -9,6 +9,7 @@ from typing import Any
 import typer
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
@@ -459,12 +460,27 @@ def create_page(
 
     # Create the page
     try:
-        created_page = confluence.create_page(
-            space_id=space_id,
-            title=title,
-            body=storage_content,
-            parent_id=parent,
-        )
+        if sys.stdout.isatty() and not json_output:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True,
+            ) as progress:
+                progress.add_task("Creating page...", total=None)
+                created_page = confluence.create_page(
+                    space_id=space_id,
+                    title=title,
+                    body=storage_content,
+                    parent_id=parent,
+                )
+        else:
+            created_page = confluence.create_page(
+                space_id=space_id,
+                title=title,
+                body=storage_content,
+                parent_id=parent,
+            )
     except ApiError as e:
         if json_output and e.response_data:
             # Output raw error JSON to stderr
@@ -613,12 +629,27 @@ def update_page(
 
     # Update the page
     try:
-        updated_page = confluence.update_page(
-            page_id=page_id,
-            title=new_title,
-            body=storage_content,
-            version_number=version_number + 1,
-        )
+        if sys.stdout.isatty() and not json_output:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True,
+            ) as progress:
+                progress.add_task("Updating page...", total=None)
+                updated_page = confluence.update_page(
+                    page_id=page_id,
+                    title=new_title,
+                    body=storage_content,
+                    version_number=version_number + 1,
+                )
+        else:
+            updated_page = confluence.update_page(
+                page_id=page_id,
+                title=new_title,
+                body=storage_content,
+                version_number=version_number + 1,
+            )
     except ApiError as e:
         if json_output and e.response_data:
             # Output raw error JSON to stderr

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from confl.client import ApiError, ConfluenceClient, get_client
@@ -158,8 +159,18 @@ def download_attachment(
             err_console.print("[red]Error:[/red] No download link found in attachment metadata")
             sys.exit(1)
 
-        # Download the file
-        content = confluence.download_attachment(download_link)
+        # Download the file with progress indicator
+        if sys.stdout.isatty():
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True,
+            ) as progress:
+                progress.add_task("Downloading attachment...", total=None)
+                content = confluence.download_attachment(download_link)
+        else:
+            content = confluence.download_attachment(download_link)
 
         # Determine output filename
         if output:
@@ -243,8 +254,18 @@ def upload_attachment(
         client = get_client()
         confluence = ConfluenceClient(client)
 
-        # Upload the file
-        result = confluence.upload_attachment(page_id, file, comment=comment)
+        # Upload the file with progress indicator
+        if sys.stdout.isatty() and not json_output:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True,
+            ) as progress:
+                progress.add_task("Uploading attachment...", total=None)
+                result = confluence.upload_attachment(page_id, file, comment=comment)
+        else:
+            result = confluence.upload_attachment(page_id, file, comment=comment)
 
         if json_output:
             print(json.dumps(result, indent=2))
