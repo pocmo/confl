@@ -44,7 +44,7 @@ class TestSpaceListCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name",
             method="GET",
             json=spaces_data,
         )
@@ -71,7 +71,7 @@ class TestSpaceListCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name",
             method="GET",
             json=spaces_data,
         )
@@ -89,7 +89,7 @@ class TestSpaceListCommand:
         spaces_data = {"results": []}
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=global",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=global&sort=name",
             method="GET",
             json=spaces_data,
         )
@@ -104,7 +104,7 @@ class TestSpaceListCommand:
         spaces_data = {"results": []}
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&status=current",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&status=current&sort=name",
             method="GET",
             json=spaces_data,
         )
@@ -115,7 +115,7 @@ class TestSpaceListCommand:
     def test_list_spaces_empty(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test listing spaces when none exist."""
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name",
             method="GET",
             json={"results": []},
         )
@@ -139,7 +139,7 @@ class TestSpaceListCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name",
             method="GET",
             json=spaces_data,
         )
@@ -178,13 +178,13 @@ class TestSpaceListCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name",
             method="GET",
             json=page1_data,
         )
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&cursor=abc123",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&cursor=abc123&sort=name",
             method="GET",
             json=page2_data,
         )
@@ -194,6 +194,109 @@ class TestSpaceListCommand:
         # Both spaces from both pages should be present
         assert "DEV" in result.stdout
         assert "TEST" in result.stdout
+
+    def test_list_spaces_sort_by_name_asc(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces sorted by name ascending (default)."""
+        spaces_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=name",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list"])
+        assert result.exit_code == 0
+
+    def test_list_spaces_sort_by_name_desc(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces sorted by name descending."""
+        spaces_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=-name",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list", "--sort", "name", "--order", "desc"])
+        assert result.exit_code == 0
+
+    def test_list_spaces_sort_by_key(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test listing spaces sorted by key."""
+        spaces_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=key",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list", "--sort", "key"])
+        assert result.exit_code == 0
+
+    def test_list_spaces_sort_by_created_desc(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces sorted by creation date descending."""
+        spaces_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&sort=-createdAt",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list", "--sort", "created", "--order", "desc"])
+        assert result.exit_code == 0
+
+    def test_list_spaces_sort_invalid_field(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces with invalid sort field."""
+        result = runner.invoke(app, ["space", "list", "--sort", "invalid"])
+        assert result.exit_code == 2
+        assert "must be one of" in result.stderr
+
+    def test_list_spaces_sort_invalid_order(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces with invalid sort order."""
+        result = runner.invoke(app, ["space", "list", "--sort", "name", "--order", "invalid"])
+        assert result.exit_code == 2
+        assert "asc" in result.stderr and "desc" in result.stderr
+
+    def test_list_spaces_sort_with_filters(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test listing spaces with sorting and filters combined."""
+        spaces_data = {"results": []}
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=global&status=current&sort=-name",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "space",
+                "list",
+                "--type",
+                "global",
+                "--status",
+                "current",
+                "--sort",
+                "name",
+                "--order",
+                "desc",
+            ],
+        )
+        assert result.exit_code == 0
 
 
 class TestSpaceGetCommand:

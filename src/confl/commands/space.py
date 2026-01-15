@@ -42,23 +42,56 @@ def list_spaces(
     status_filter: str = typer.Option(
         None, "--status", help="Filter by space status (current, archived)"
     ),
+    sort: str = typer.Option(
+        "name",
+        "--sort",
+        help="Sort by: id, key, name, type, status, created (default: name)",
+    ),
+    order: str = typer.Option(
+        "asc",
+        "--order",
+        help="Sort order: asc or desc (default: asc)",
+    ),
 ) -> None:
     """List spaces.
 
-    By default, fetches all spaces. Use --limit to restrict results.
+    By default, fetches all spaces sorted by name. Use --limit to restrict results.
 
     Examples:
         confl space list
         confl space list --limit 50
         confl space list --type global
         confl space list --status current
+        confl space list --sort name --order desc
+        confl space list --sort created --order desc
         confl space list --json
     """
+    # Validate order parameter
+    if order.lower() not in ["asc", "desc"]:
+        err_console.print("[red]Error:[/red] --order must be 'asc' or 'desc'")
+        sys.exit(2)
+
+    # Validate sort parameter
+    valid_sorts = ["id", "key", "name", "type", "status", "created"]
+    if sort.lower() not in valid_sorts:
+        err_console.print(f"[red]Error:[/red] --sort must be one of: {', '.join(valid_sorts)}")
+        sys.exit(2)
+
+    # Map 'created' to 'createdAt' for API
+    sort_param = "createdAt" if sort.lower() == "created" else sort.lower()
+
+    # Add descending prefix if needed
+    if order.lower() == "desc":
+        sort_param = f"-{sort_param}"
+
     try:
         client = get_client()
         confluence = ConfluenceClient(client)
         spaces = confluence.list_spaces(
-            limit=limit, type_filter=type_filter, status_filter=status_filter
+            limit=limit,
+            type_filter=type_filter,
+            status_filter=status_filter,
+            sort=sort_param,
         )
     except ApiError as e:
         if json_output and e.response_data:

@@ -544,14 +544,16 @@ class ConfluenceClient:
         limit: int | None = None,
         type_filter: str | None = None,
         status_filter: str | None = None,
+        sort: str | None = None,
     ) -> list[dict[str, Any]]:
-        """List spaces with optional filtering.
+        """List spaces with optional filtering and sorting.
 
         Args:
             limit: Maximum number of results to return. If None, fetches all spaces.
                   If specified, fetches up to limit results (may require pagination).
             type_filter: Optional filter by space type (global, personal)
             status_filter: Optional filter by space status (current, archived)
+            sort: Optional sort parameter (e.g., 'name', '-name' for descending)
 
         Returns:
             List of space objects with metadata (id, key, name, type, status)
@@ -569,6 +571,8 @@ class ConfluenceClient:
                 params["type"] = type_filter
             if status_filter:
                 params["status"] = status_filter
+            if sort:
+                params["sort"] = sort
             if cursor:
                 params["cursor"] = cursor
 
