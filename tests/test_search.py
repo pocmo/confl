@@ -490,3 +490,44 @@ class TestSearchCommand:
         assert "12345" in result.stdout
         assert "Engineering Guide" in result.stdout
         assert "ENG" in result.stdout
+
+    def test_search_decodes_html_entities_in_titles(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test that HTML entities in titles are decoded."""
+        search_results = {
+            "results": [
+                {
+                    "content": {
+                        "id": "1001",
+                        "type": "page",
+                        "space": {"key": "TEST"},
+                    },
+                    "title": "Monopoly Prioritization &amp; Stakeholder Interviews",
+                },
+                {
+                    "content": {
+                        "id": "1002",
+                        "type": "page",
+                        "space": {"key": "TEST"},
+                    },
+                    "title": "Q&amp;A Session &lt;Draft&gt;",
+                },
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/rest/api/search?cql=space+%3D+TEST&limit=25",
+            method="GET",
+            json=search_results,
+        )
+
+        result = runner.invoke(app, ["search", "--space", "TEST"])
+        assert result.exit_code == 0
+        # HTML entities should be decoded in output
+        assert "Monopoly Prioritization & Stakeholder Interviews" in result.stdout
+        assert "Q&A Session <Draft>" in result.stdout
+        # Raw HTML entities should NOT appear
+        assert "&amp;" not in result.stdout
+        assert "&lt;" not in result.stdout
+        assert "&gt;" not in result.stdout

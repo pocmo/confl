@@ -1,5 +1,6 @@
 """Search commands."""
 
+import html
 import json
 import sys
 
@@ -101,7 +102,7 @@ def search_command(
             content = result.get("content", {})
             content_type_val = content.get("type", "")
             content_id = content.get("id", "")
-            title = result.get("title", "Untitled")
+            title = html.unescape(result.get("title", "Untitled"))
 
             # Extract space key if available
             space_data = content.get("space", {})
