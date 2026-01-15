@@ -541,14 +541,15 @@ class ConfluenceClient:
 
     def list_spaces(
         self,
-        limit: int = 25,
+        limit: int | None = None,
         type_filter: str | None = None,
         status_filter: str | None = None,
     ) -> list[dict[str, Any]]:
         """List spaces with optional filtering.
 
         Args:
-            limit: Maximum number of results to return (default 25)
+            limit: Maximum number of results to return. If None, fetches all spaces.
+                  If specified, fetches up to limit results (may require pagination).
             type_filter: Optional filter by space type (global, personal)
             status_filter: Optional filter by space status (current, archived)
 
@@ -558,19 +559,57 @@ class ConfluenceClient:
         Raises:
             ApiError: If the request fails
         """
-        params: dict[str, Any] = {"limit": str(limit)}
-        if type_filter:
-            params["type"] = type_filter
-        if status_filter:
-            params["status"] = status_filter
+        all_spaces: list[dict[str, Any]] = []
+        cursor: str | None = None
+        page_size = 100  # Fetch 100 per page for efficiency
 
-        response = self.client.get("/spaces", params=params)
+        while True:
+            params: dict[str, Any] = {"limit": str(page_size)}
+            if type_filter:
+                params["type"] = type_filter
+            if status_filter:
+                params["status"] = status_filter
+            if cursor:
+                params["cursor"] = cursor
 
-        if response.status_code != 200:
-            handle_api_error(response)
+            response = self.client.get("/spaces", params=params)
 
-        result = cast(dict[str, Any], response.json())
-        return cast(list[dict[str, Any]], result.get("results", []))
+            if response.status_code != 200:
+                handle_api_error(response)
+
+            result = cast(dict[str, Any], response.json())
+            spaces = cast(list[dict[str, Any]], result.get("results", []))
+            all_spaces.extend(spaces)
+
+            # Stop if we've reached the requested limit
+            if limit is not None and len(all_spaces) >= limit:
+                return all_spaces[:limit]
+
+            # Check for next page
+            links = result.get("_links", {})
+            next_link = links.get("next")
+            if not next_link:
+                # No more pages
+                break
+
+            # Extract cursor from next link
+            # The next link typically looks like: "/wiki/api/v2/spaces?cursor=..."
+            if isinstance(next_link, str):
+                # Parse cursor from URL string
+                import urllib.parse
+
+                parsed = urllib.parse.urlparse(next_link)
+                query_params = urllib.parse.parse_qs(parsed.query)
+                cursor = query_params.get("cursor", [None])[0]
+            else:
+                # Sometimes it's a dict with 'href' key
+                cursor = None
+
+            if not cursor:
+                # Can't find cursor, stop pagination
+                break
+
+        return all_spaces
 
     def get_space(self, space_ref: str) -> dict[str, Any]:
         """Get a space by key or ID.

@@ -44,7 +44,7 @@ class TestSpaceListCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=25",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
             method="GET",
             json=spaces_data,
         )
@@ -71,7 +71,7 @@ class TestSpaceListCommand:
         }
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=25",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
             method="GET",
             json=spaces_data,
         )
@@ -89,7 +89,7 @@ class TestSpaceListCommand:
         spaces_data = {"results": []}
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=25&type=global",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&type=global",
             method="GET",
             json=spaces_data,
         )
@@ -104,7 +104,7 @@ class TestSpaceListCommand:
         spaces_data = {"results": []}
 
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=25&status=current",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&status=current",
             method="GET",
             json=spaces_data,
         )
@@ -115,7 +115,7 @@ class TestSpaceListCommand:
     def test_list_spaces_empty(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test listing spaces when none exist."""
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=25",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
             method="GET",
             json={"results": []},
         )
@@ -123,6 +123,77 @@ class TestSpaceListCommand:
         result = runner.invoke(app, ["space", "list"])
         assert result.exit_code == 0
         assert "No spaces found" in result.stdout
+
+    def test_list_spaces_with_limit(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test listing spaces with explicit limit."""
+        spaces_data = {
+            "results": [
+                {
+                    "id": "123",
+                    "key": "DEV",
+                    "name": "Development",
+                    "type": "global",
+                    "status": "current",
+                },
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
+            method="GET",
+            json=spaces_data,
+        )
+
+        result = runner.invoke(app, ["space", "list", "--limit", "10"])
+        assert result.exit_code == 0
+        assert "DEV" in result.stdout
+
+    def test_list_spaces_pagination(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
+        """Test that list_spaces follows pagination to get all results."""
+        # First page
+        page1_data = {
+            "results": [
+                {
+                    "id": "123",
+                    "key": "DEV",
+                    "name": "Development",
+                    "type": "global",
+                    "status": "current",
+                },
+            ],
+            "_links": {"next": "/wiki/api/v2/spaces?cursor=abc123"},
+        }
+
+        # Second page (last page, no next link)
+        page2_data = {
+            "results": [
+                {
+                    "id": "456",
+                    "key": "TEST",
+                    "name": "Testing",
+                    "type": "global",
+                    "status": "current",
+                },
+            ]
+        }
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100",
+            method="GET",
+            json=page1_data,
+        )
+
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?limit=100&cursor=abc123",
+            method="GET",
+            json=page2_data,
+        )
+
+        result = runner.invoke(app, ["space", "list"])
+        assert result.exit_code == 0
+        # Both spaces from both pages should be present
+        assert "DEV" in result.stdout
+        assert "TEST" in result.stdout
 
 
 class TestSpaceGetCommand:

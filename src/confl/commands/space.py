@@ -33,7 +33,9 @@ def _extract_space_id_or_key(ref: str) -> str:
 
 @app.command("list")
 def list_spaces(
-    limit: int = typer.Option(25, "--limit", help="Maximum number of results"),
+    limit: int | None = typer.Option(
+        None, "--limit", help="Maximum number of results (default: all)"
+    ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON array"),
     type_filter: str = typer.Option(None, "--type", help="Filter by space type (global, personal)"),
     status_filter: str = typer.Option(
@@ -41,6 +43,8 @@ def list_spaces(
     ),
 ) -> None:
     """List spaces.
+
+    By default, fetches all spaces. Use --limit to restrict results.
 
     Examples:
         confl space list
