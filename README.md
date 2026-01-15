@@ -117,6 +117,8 @@ See [Commands Reference](docs/commands.md) for complete command documentation wi
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
