@@ -1,6 +1,6 @@
 ---
 id: c-b5d2
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-14T21:28:17Z
@@ -86,3 +86,7 @@ This is a DISCOVERY ticket. Research, document, file follow-ups, then STOP.
 - Consider both human and automation use cases
 - Some improvements may conflict with 'non-interactive by default' principle - note trade-offs
 
+
+**2026-01-15T06:34:39Z**
+
+Completed: Created comprehensive UX improvements document at docs/architecture/cli-ux-improvements.md. Analyzed current state, researched best practices from gh/kubectl/git/docker, and identified 15 specific improvements across 3 priority tiers. Filed 9 follow-up implementation tickets (5 P1, 4 P2) covering quick wins and core improvements. Key findings: confl already has strong foundations (entity-first structure, multiple output formats, smart typo handling), but would benefit from confirmation prompts, progress indicators, better error messages, dry-run mode, and human-readable formats.

@@ -163,6 +163,16 @@ PROMPT
     iter_secs=$((iter_duration % 60))
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] --- Iteration $iteration finished (${iter_mins}m ${iter_secs}s) ---" >> "$SCRIPT_LOG"
 
+    # Push changes to remote
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Pushing changes to remote..." >> "$SCRIPT_LOG"
+    if git push 2>&1 | tee -a "$SCRIPT_LOG"; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Git push successful" >> "$SCRIPT_LOG"
+        echo "✅ Pushed changes to remote"
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Git push failed or nothing to push" >> "$SCRIPT_LOG"
+        echo "⚠️  Git push failed or nothing to push"
+    fi
+
     # Check for completion signal in agent's handoff log
     if [[ -f "$AGENT_LOG" ]] && tail -5 "$AGENT_LOG" | grep -q "COMPLETE"; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent signaled COMPLETE. Exiting loop." >> "$SCRIPT_LOG"
