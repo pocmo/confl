@@ -2,7 +2,7 @@
 
 import typer
 
-from confl.commands import attachment, auth, label, page, search, space
+from confl.commands import attachment, auth, comment, label, page, search, space
 
 app = typer.Typer(
     name="confl",
@@ -16,6 +16,7 @@ app.add_typer(page.app, name="page")
 app.add_typer(space.app, name="space")
 app.add_typer(attachment.app, name="attachment")
 app.add_typer(label.app, name="label")
+app.add_typer(comment.app, name="comment")
 
 # Register direct commands
 app.command(name="search")(search.search_command)

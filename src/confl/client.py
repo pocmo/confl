@@ -924,3 +924,194 @@ class ConfluenceClient:
 
         result = cast(dict[str, Any], response.json())
         return cast(list[dict[str, Any]], result.get("results", []))
+
+    def list_footer_comments(
+        self, page_id: str | None = None, limit: int = 25
+    ) -> list[dict[str, Any]]:
+        """List footer comments on a page or all footer comments.
+
+        Args:
+            page_id: Optional page ID to filter by. If None, lists all footer comments.
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of comment objects with id, body, author, created/modified dates
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit), "body-format": "storage"}
+
+        if page_id:
+            response = self.client.get(f"/pages/{page_id}/footer-comments", params=params)
+        else:
+            response = self.client.get("/footer-comments", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def get_footer_comment(self, comment_id: str) -> dict[str, Any]:
+        """Get a footer comment by ID.
+
+        Args:
+            comment_id: Comment ID
+
+        Returns:
+            Comment object with id, body, author, created/modified dates
+
+        Raises:
+            ApiError: If the request fails
+        """
+        response = self.client.get(
+            f"/footer-comments/{comment_id}", params={"body-format": "storage"}
+        )
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def create_footer_comment(
+        self,
+        body: str,
+        page_id: str | None = None,
+        blogpost_id: str | None = None,
+        parent_comment_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a footer comment on a page or blog post, or as a reply to another comment.
+
+        Args:
+            body: Comment body in storage format
+            page_id: Page ID to comment on (mutually exclusive with blogpost_id)
+            blogpost_id: Blog post ID to comment on (mutually exclusive with page_id)
+            parent_comment_id: Parent comment ID for replies
+
+        Returns:
+            Created comment object
+
+        Raises:
+            ApiError: If the request fails
+            ValueError: If neither page_id nor blogpost_id is provided
+        """
+        if not page_id and not blogpost_id and not parent_comment_id:
+            raise ValueError("Must provide either page_id, blogpost_id, or parent_comment_id")
+
+        payload: dict[str, Any] = {
+            "body": {
+                "representation": "storage",
+                "value": body,
+            }
+        }
+
+        if page_id:
+            payload["pageId"] = page_id
+        elif blogpost_id:
+            payload["blogPostId"] = blogpost_id
+
+        if parent_comment_id:
+            payload["parentCommentId"] = parent_comment_id
+
+        response = self.client.post("/footer-comments", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def update_footer_comment(self, comment_id: str, body: str) -> dict[str, Any]:
+        """Update a footer comment.
+
+        Args:
+            comment_id: Comment ID to update
+            body: New comment body in storage format
+
+        Returns:
+            Updated comment object
+
+        Raises:
+            ApiError: If the request fails
+        """
+        payload = {
+            "body": {
+                "representation": "storage",
+                "value": body,
+            }
+        }
+
+        response = self.client.put(f"/footer-comments/{comment_id}", json=payload)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())
+
+    def delete_footer_comment(self, comment_id: str) -> None:
+        """Delete a footer comment.
+
+        Args:
+            comment_id: Comment ID to delete
+
+        Raises:
+            ApiError: If the request fails (except 404 which is handled gracefully)
+        """
+        response = self.client.delete(f"/footer-comments/{comment_id}")
+
+        if response.status_code == 204:
+            return
+        elif response.status_code == 404:
+            # Comment already deleted or doesn't exist - that's fine
+            return
+        else:
+            handle_api_error(response)
+
+    def list_inline_comments(
+        self, page_id: str | None = None, limit: int = 25
+    ) -> list[dict[str, Any]]:
+        """List inline comments on a page or all inline comments.
+
+        Args:
+            page_id: Optional page ID to filter by. If None, lists all inline comments.
+            limit: Maximum number of results to return (default 25)
+
+        Returns:
+            List of comment objects with id, body, author, created/modified dates
+
+        Raises:
+            ApiError: If the request fails
+        """
+        params: dict[str, Any] = {"limit": str(limit), "body-format": "storage"}
+
+        if page_id:
+            response = self.client.get(f"/pages/{page_id}/inline-comments", params=params)
+        else:
+            response = self.client.get("/inline-comments", params=params)
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        result = cast(dict[str, Any], response.json())
+        return cast(list[dict[str, Any]], result.get("results", []))
+
+    def get_inline_comment(self, comment_id: str) -> dict[str, Any]:
+        """Get an inline comment by ID.
+
+        Args:
+            comment_id: Comment ID
+
+        Returns:
+            Comment object with id, body, author, created/modified dates
+
+        Raises:
+            ApiError: If the request fails
+        """
+        response = self.client.get(
+            f"/inline-comments/{comment_id}", params={"body-format": "storage"}
+        )
+
+        if response.status_code != 200:
+            handle_api_error(response)
+
+        return cast(dict[str, Any], response.json())

@@ -99,3 +99,56 @@ CQL supports powerful queries with operators and functions:
 - `ORDER BY lastmodified DESC` — Sorting
 
 For complete CQL reference, see [Atlassian's CQL documentation](https://developer.atlassian.com/cloud/confluence/advanced-searching-using-cql/).
+
+### comment
+
+Manage comments on Confluence pages. Supports listing, viewing, creating, updating, and deleting both footer comments (page-level) and inline comments (specific locations).
+
+**Commands:**
+
+- `confl comment list` — List comments on a page or all comments
+- `confl comment get` — Get comment details
+- `confl comment add` — Add a new comment to a page or reply to another comment
+- `confl comment update` — Update an existing comment's body
+- `confl comment delete` — Delete a comment
+
+**Examples:**
+
+```bash
+# List all comments on a page
+confl comment list --page 123456
+
+# List comments with inline comments included
+confl comment list --page 123456 --include-inline
+
+# Get a specific comment
+confl comment get 789012
+
+# View comment body as markdown
+confl comment get 789012 --markdown
+
+# Add a comment to a page
+confl comment add --page 123456 --body "Great work on this page!"
+
+# Add a comment from a markdown file
+confl comment add --page 123456 --body-file comment.md
+
+# Reply to another comment
+confl comment add --parent 789012 --body "I agree with this point"
+
+# Update a comment
+confl comment update 789012 --body "Updated feedback"
+
+# Delete a comment
+confl comment delete 789012
+
+# Get results as JSON
+confl comment list --page 123456 --json
+confl comment get 789012 --json
+```
+
+**Notes:**
+- Comment body supports Markdown input which is automatically converted to Confluence storage format
+- Use `--page` to comment on a page or `--parent` to reply to an existing comment
+- Both footer comments (page-level) and inline comments (location-specific) are supported
+- The `--include-inline` flag includes inline comments in list results
