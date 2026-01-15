@@ -6,6 +6,24 @@ An unofficial command-line interface for Atlassian Confluence Cloud.
 
 `confl` is a CLI tool for reading and editing Confluence pages directly from your terminal. It's designed to be scriptable and agent-friendly—no interactive editors by default, just straightforward commands that can be chained and automated.
 
+## Quick Start
+
+```bash
+# Install
+pipx install git+https://github.com/pocmo/confl.git
+
+# Authenticate with API token
+echo "$CONFLUENCE_TOKEN" | confl auth login --token --site yoursite.atlassian.net --email you@example.com
+
+# List pages in a space
+confl page list --space DEV
+
+# Get a page by ID
+confl page get <page-id>
+```
+
+See [Authentication](#authentication) and [Configuration](#configuration) for more details.
+
 ## Authentication
 
 - **API Token** — for CI/automation (via environment variables or config file)
