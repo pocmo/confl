@@ -24,10 +24,14 @@ def temp_credentials_file(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def clean_env(monkeypatch):
-    """Remove all CONFL_* environment variables."""
+def clean_env(monkeypatch, tmp_path):
+    """Remove all CONFL_* environment variables and isolate credentials file."""
     for var in ["CONFL_SITE", "CONFL_EMAIL", "CONFL_TOKEN"]:
         monkeypatch.delenv(var, raising=False)
+
+    # Point credentials to a non-existent temp file to isolate from real credentials
+    non_existent = tmp_path / "non_existent_credentials.toml"
+    monkeypatch.setattr("confl.credentials.get_credentials_path", lambda: non_existent)
 
 
 def test_auth_status_not_authenticated(clean_env):

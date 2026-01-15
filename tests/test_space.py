@@ -328,7 +328,7 @@ class TestSpaceListCommand:
 
         # Mock current user endpoint
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            url="https://example.atlassian.net/wiki/rest/api/user/current",
             method="GET",
             json=user_data,
         )
@@ -371,7 +371,7 @@ class TestSpaceListCommand:
 
         # Mock current user endpoint
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            url="https://example.atlassian.net/wiki/rest/api/user/current",
             method="GET",
             json=user_data,
         )
@@ -438,7 +438,7 @@ class TestSpaceListCommand:
 
         # Mock current user endpoint
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/user/current",
+            url="https://example.atlassian.net/wiki/rest/api/user/current",
             method="GET",
             json=user_data,
         )

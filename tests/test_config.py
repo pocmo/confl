@@ -26,11 +26,15 @@ def temp_credentials_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
 
 @pytest.fixture
-def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Clean environment variables."""
+def clean_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Clean environment variables and isolate credentials file."""
     monkeypatch.delenv("CONFL_SITE", raising=False)
     monkeypatch.delenv("CONFL_EMAIL", raising=False)
     monkeypatch.delenv("CONFL_TOKEN", raising=False)
+
+    # Point credentials to a non-existent temp file to isolate from real credentials
+    non_existent = tmp_path / "non_existent_credentials.toml"
+    monkeypatch.setattr("confl.credentials.get_credentials_path", lambda: non_existent)
 
 
 def test_get_config_from_env_vars(clean_env: None) -> None:
