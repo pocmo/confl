@@ -39,6 +39,33 @@ Common filter parameters:
 - `status` - Filter by content status (current, archived, trashed, deleted)
 - `sort` - Sort order (created-date, modified-date, title, etc.)
 
+### Space Identification
+
+Confluence spaces can be identified by two different values:
+
+- **Space Key**: A human-readable unique identifier (e.g., `DEV`, `TEAM`)
+  - For personal spaces: tilde (`~`) followed by account ID (e.g., `~61df405068926d0068c87f43`)
+  - Visible in URLs: `/wiki/spaces/~61df405068926d0068c87f43/overview`
+  - Can be changed by admins (except personal space keys)
+  
+- **Space ID**: An immutable numeric identifier (e.g., `3277554038`)
+  - Never changes, even if space key is renamed
+  - Required by many API v2 endpoints
+
+**API v2 Endpoint Behavior:**
+- `GET /spaces?keys={key}` - Accepts space keys (including personal space keys with `~`)
+- `GET /spaces/{id}` - Only accepts numeric space IDs
+- `PUT /spaces/{id}` - Only accepts numeric space IDs  
+- `DELETE /spaces/{id}` - Only accepts numeric space IDs
+
+**To convert space key to ID:**
+```
+GET /spaces?keys=SPACEKEY
+```
+The response includes both `id` (numeric) and `key` fields.
+
+**Important:** Unlike API v1, API v2 endpoints with `{id}` in the path only accept numeric IDs. Attempting to use a space key will result in a 400 error: "Provided value {...} for 'id' is not the correct type. Expected type is long."
+
 ## Error Responses
 
 The API uses standard HTTP status codes:
