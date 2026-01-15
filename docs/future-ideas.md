@@ -1,17 +1,16 @@
 # Future Ideas
 
-Potential enhancements for future discovery and implementation.
+**Note:** This document contains speculative ideas for potential future enhancements. These are **not** planned work items. For concrete feature requests or bugs, create tickets using `tk create`.
 
-## Commands
+Many features originally listed here have been implemented. See the CLI help (`confl --help`) and documentation for current capabilities.
 
-- `confl page history <ref>` — view version history
+## Potential Commands
+
 - `confl page diff <ref> --version 5` — diff between versions
-- `confl page restore <ref> --version 3` — restore previous version
 - `confl page move <ref> --parent <ref>` — move page in hierarchy
 - `confl page copy <ref> --space NEW` — copy page to another space
 - `confl template list` — list page templates
 - `confl template apply <name>` — create page from template
-- `confl label add/remove/list` — manage page labels
 - `confl watch <ref>` — watch a page for changes
 - `confl export --space KEY` — bulk export to Markdown files
 
@@ -27,10 +26,7 @@ Potential enhancements for future discovery and implementation.
 - `confl diff local.md remote` — diff local file against page
 - `confl sync` — bidirectional sync between local files and Confluence
 - Tab completion for space keys and page titles
-- `--dry-run` flag for destructive operations
-- `--verbose` / `--debug` flags for troubleshooting
-- Config profiles for multiple Confluence sites
-- Rate limiting / retry with backoff
+- Rate limiting / retry with backoff (basic retry exists but could be enhanced)
 
 ## Integrations
 
