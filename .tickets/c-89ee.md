@@ -1,6 +1,6 @@
 ---
 id: c-89ee
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T10:01:38Z
@@ -78,3 +78,20 @@ This is a DISCOVERY ticket. Research, document, file follow-ups, then STOP.
 - Consider how other tools handle this (gh, gcloud, etc.)
 - May relate to overall search/discovery strategy
 
+
+**2026-01-15T11:29:01Z**
+
+Discovery complete. Documented findings in docs/architecture/space-lookup-discovery.md
+
+Key findings:
+- CQL search via v1 API works perfectly: type=space AND title~"query"
+- v2 API /spaces endpoint has NO name search parameter
+- Two viable approaches: CQL search (recommended) or client-side filtering
+- CQL supports fuzzy matching, exact matching, type filtering
+- Tested with real Confluence instance (1056 spaces)
+
+Recommendation: Implement 'confl space search' command using CQL
+
+Filed follow-up tickets:
+- c-b46a [P1] - Implement confl space search command (MVP)
+- c-4877 [P3] - Add confl space whoami for user discovery
