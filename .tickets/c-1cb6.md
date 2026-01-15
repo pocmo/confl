@@ -1,11 +1,11 @@
 ---
 id: c-1cb6
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-15T10:02:22Z
 type: task
-priority: 1
+priority: 0
 assignee: Sebastian Kaspari
 ---
 # FIX: Make get_space() accept both space keys and IDs
@@ -39,3 +39,7 @@ Solution applies to all three:
 - Parse space_ref to check if numeric
 - If numeric: use /spaces/{id} 
 - If not numeric: first resolve key to ID using /spaces?keys={key}, then use /spaces/{id}
+
+**2026-01-15T10:12:15Z**
+
+Completed: Fixed get_space(), update_space(), and delete_space() to properly handle both space keys and numeric IDs. Methods now check if input is numeric and either use /spaces/{id} directly or resolve key via /spaces?keys={key} first.

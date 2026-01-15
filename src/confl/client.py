@@ -584,13 +584,18 @@ class ConfluenceClient:
         Raises:
             ApiError: If the request fails or space not found (404)
         """
-        # API accepts both IDs and keys in the same endpoint
-        response = self.client.get(f"/spaces/{space_ref}")
+        # Check if space_ref is numeric (space ID) or not (space key)
+        if space_ref.isdigit():
+            # It's a numeric ID - use /spaces/{id} endpoint directly
+            response = self.client.get(f"/spaces/{space_ref}")
 
-        if response.status_code != 200:
-            handle_api_error(response)
+            if response.status_code != 200:
+                handle_api_error(response)
 
-        return cast(dict[str, Any], response.json())
+            return cast(dict[str, Any], response.json())
+        else:
+            # It's a space key - resolve to ID first, then fetch
+            return self.get_space_by_key(space_ref)
 
     def create_space(self, key: str, name: str, description: str | None = None) -> dict[str, Any]:
         """Create a new space.
@@ -637,6 +642,13 @@ class ConfluenceClient:
         Raises:
             ApiError: If the request fails
         """
+        # Resolve space key to ID if needed
+        if not space_ref.isdigit():
+            space_data = self.get_space_by_key(space_ref)
+            space_id = str(space_data["id"])
+        else:
+            space_id = space_ref
+
         # Build update payload with only provided fields
         payload: dict[str, Any] = {}
 
@@ -646,8 +658,7 @@ class ConfluenceClient:
         if description:
             payload["description"] = {"plain": {"value": description, "representation": "plain"}}
 
-        # API accepts both IDs and keys in the same endpoint
-        response = self.client.put(f"/spaces/{space_ref}", json=payload)
+        response = self.client.put(f"/spaces/{space_id}", json=payload)
 
         if response.status_code != 200:
             handle_api_error(response)
@@ -663,8 +674,20 @@ class ConfluenceClient:
         Raises:
             ApiError: If the request fails (except 404 which is handled gracefully)
         """
-        # API accepts both IDs and keys in the same endpoint
-        response = self.client.delete(f"/spaces/{space_ref}")
+        # Resolve space key to ID if needed
+        if not space_ref.isdigit():
+            try:
+                space_data = self.get_space_by_key(space_ref)
+                space_id = str(space_data["id"])
+            except ApiError as e:
+                # If space key not found (404), treat same as if ID not found
+                if e.status_code == 404:
+                    return
+                raise
+        else:
+            space_id = space_ref
+
+        response = self.client.delete(f"/spaces/{space_id}")
 
         # Accept both 204 (No Content - successful deletion) and 404 (already gone)
         if response.status_code == 204:

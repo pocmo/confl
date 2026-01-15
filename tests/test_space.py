@@ -142,10 +142,11 @@ class TestSpaceGetCommand:
             "createdAt": "2024-01-15T10:00:00.000Z",
         }
 
+        # When key is provided, should use /spaces?keys={key} endpoint
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
             method="GET",
-            json=space_data,
+            json={"results": [space_data]},
         )
 
         result = runner.invoke(app, ["space", "get", "DEV"])
@@ -185,10 +186,11 @@ class TestSpaceGetCommand:
             "status": "current",
         }
 
+        # When key is provided, should use /spaces?keys={key} endpoint
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
             method="GET",
-            json=space_data,
+            json={"results": [space_data]},
         )
 
         result = runner.invoke(app, ["space", "get", "DEV", "--json"])
@@ -198,24 +200,39 @@ class TestSpaceGetCommand:
 
     def test_get_space_not_found(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test getting a non-existent space."""
+        # When key is provided and not found, get_space_by_key returns empty results
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/NOTFOUND",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=NOTFOUND",
             method="GET",
-            status_code=404,
-            json={
-                "errors": [
-                    {
-                        "status": 404,
-                        "title": "Not Found",
-                        "detail": "Space not found",
-                    }
-                ]
-            },
+            json={"results": []},
         )
 
         result = runner.invoke(app, ["space", "get", "NOTFOUND"])
         assert result.exit_code == 1
-        assert "Not found" in result.stderr
+        assert "not found" in result.stderr.lower()
+
+    def test_get_space_with_numeric_id_directly(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test that numeric IDs bypass key resolution and use /spaces/{id} directly."""
+        space_data = {
+            "id": "123",
+            "key": "DEV",
+            "name": "Development",
+            "type": "global",
+            "status": "current",
+        }
+
+        # Should call /spaces/123 directly, not /spaces?keys=123
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
+            method="GET",
+            json=space_data,
+        )
+
+        result = runner.invoke(app, ["space", "get", "123"])
+        assert result.exit_code == 0
+        assert "Key: DEV" in result.stdout
 
 
 class TestSpaceCreateCommand:
@@ -326,6 +343,13 @@ class TestSpaceUpdateCommand:
 
     def test_update_space_name(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test updating a space name."""
+        # First resolves key to ID
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [{"id": "123", "key": "DEV", "name": "Development"}]},
+        )
+
         updated_space = {
             "id": "123",
             "key": "DEV",
@@ -334,8 +358,9 @@ class TestSpaceUpdateCommand:
             "status": "current",
         }
 
+        # Then updates using numeric ID
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
             method="PUT",
             json=updated_space,
         )
@@ -346,6 +371,13 @@ class TestSpaceUpdateCommand:
 
     def test_update_space_description(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test updating a space description."""
+        # First resolves key to ID
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [{"id": "123", "key": "DEV", "name": "Development"}]},
+        )
+
         updated_space = {
             "id": "123",
             "key": "DEV",
@@ -354,8 +386,9 @@ class TestSpaceUpdateCommand:
             "status": "current",
         }
 
+        # Then updates using numeric ID
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
             method="PUT",
             json=updated_space,
         )
@@ -372,6 +405,13 @@ class TestSpaceUpdateCommand:
 
     def test_update_space_json_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test updating a space with JSON output."""
+        # First resolves key to ID
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [{"id": "123", "key": "DEV", "name": "Development"}]},
+        )
+
         updated_space = {
             "id": "123",
             "key": "DEV",
@@ -380,8 +420,9 @@ class TestSpaceUpdateCommand:
             "status": "current",
         }
 
+        # Then updates using numeric ID
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
             method="PUT",
             json=updated_space,
         )
@@ -391,14 +432,45 @@ class TestSpaceUpdateCommand:
         output = json.loads(result.stdout)
         assert output["name"] == "New Name"
 
+    def test_update_space_with_numeric_id_directly(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test that numeric IDs bypass key resolution for update."""
+        updated_space = {
+            "id": "123",
+            "key": "DEV",
+            "name": "New Name",
+            "type": "global",
+            "status": "current",
+        }
+
+        # Should call /spaces/123 directly, not resolve key first
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
+            method="PUT",
+            json=updated_space,
+        )
+
+        result = runner.invoke(app, ["space", "update", "123", "--name", "New Name"])
+        assert result.exit_code == 0
+        assert "Space updated" in result.stdout
+
 
 class TestSpaceDeleteCommand:
     """Tests for 'confl space delete' command."""
 
     def test_delete_space(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test deleting a space."""
+        # First resolves key to ID
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [{"id": "123", "key": "DEV", "name": "Development"}]},
+        )
+
+        # Then deletes using numeric ID
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
             method="DELETE",
             status_code=204,
         )
@@ -421,8 +493,16 @@ class TestSpaceDeleteCommand:
 
     def test_delete_space_json_output(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test deleting a space with JSON output."""
+        # First resolves key to ID
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [{"id": "123", "key": "DEV", "name": "Development"}]},
+        )
+
+        # Then deletes using numeric ID
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
             method="DELETE",
             status_code=204,
         )
@@ -434,20 +514,44 @@ class TestSpaceDeleteCommand:
 
     def test_delete_space_not_found(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test deleting a non-existent space (should succeed)."""
+        # Key resolution fails - space not found
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/NOTFOUND",
-            method="DELETE",
-            status_code=404,
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=NOTFOUND",
+            method="GET",
+            json={"results": []},
         )
 
         result = runner.invoke(app, ["space", "delete", "NOTFOUND"])
         assert result.exit_code == 0  # 404 is treated as success
         assert "Space deleted" in result.stdout
 
+    def test_delete_space_with_numeric_id_directly(
+        self, httpx_mock: HTTPXMock, mock_config_env: None
+    ) -> None:
+        """Test that numeric IDs bypass key resolution for delete."""
+        # Should call /spaces/123 directly, not resolve key first
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
+            method="DELETE",
+            status_code=204,
+        )
+
+        result = runner.invoke(app, ["space", "delete", "123"])
+        assert result.exit_code == 0
+        assert "Space deleted" in result.stdout
+
     def test_delete_space_with_yes_flag(self, httpx_mock: HTTPXMock, mock_config_env: None) -> None:
         """Test deleting a space with --yes flag bypasses confirmation."""
+        # First resolves key to ID
         httpx_mock.add_response(
-            url="https://example.atlassian.net/wiki/api/v2/spaces/DEV",
+            url="https://example.atlassian.net/wiki/api/v2/spaces?keys=DEV",
+            method="GET",
+            json={"results": [{"id": "123", "key": "DEV", "name": "Development"}]},
+        )
+
+        # Then deletes using numeric ID
+        httpx_mock.add_response(
+            url="https://example.atlassian.net/wiki/api/v2/spaces/123",
             method="DELETE",
             status_code=204,
         )
