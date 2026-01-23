@@ -473,19 +473,32 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         return f"[Macro: {macro_name}]\n\n"
 
     def convert_ac_link(self, el: Tag, text: str, **options: Any) -> str:
-        """Convert Confluence page link to Markdown.
+        """Convert Confluence link to Markdown.
 
-        Handles <ac:link> tags with <ri:page> references.
-        Shows link text in brackets: [Page Title]
+        Handles <ac:link> tags with <ri:page> or <ri:user> references.
 
-        Example Confluence format:
+        For user mentions: delegates to convert_ri_user() to show @username
+        For page links: shows link text in brackets: [Page Title]
+
+        Example Confluence formats:
             <ac:link ac:card-appearance="inline">
                 <ri:page ri:space-key="PM" ri:content-title="Page Title" />
                 <ac:link-body>Page Title</ac:link-body>
             </ac:link>
 
-        Result: [Page Title]
+            <ac:link>
+                <ri:user ri:username="jsmith" />
+                <ac:link-body>John Smith</ac:link-body>
+            </ac:link>
+
+        Result: [Page Title] or @jsmith
         """
+        # Check if this is a user mention wrapped in ac:link
+        ri_user = el.find("ri:user")
+        if ri_user is not None:
+            # Delegate to convert_ri_user to handle username/account-id logic
+            return self.convert_ri_user(ri_user, text, **options)
+
         # Extract link text from ac:link-body
         link_body = el.find("ac:link-body")
         if link_body is not None:

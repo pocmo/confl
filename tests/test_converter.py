@@ -1714,6 +1714,83 @@ class TestUserMentions:
         assert "@jane-doe" in result
         assert "@bob_jones" in result
 
+    def test_user_mention_wrapped_in_ac_link_with_username(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Modern Confluence wraps mentions in ac:link tags
+        storage = """
+        <p>Hello <ac:link>
+            <ri:user ri:username="jsmith" />
+            <ac:link-body>John Smith</ac:link-body>
+        </ac:link></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        # Should show @username, not link body text
+        assert "John Smith" not in result or "@jsmith" in result
+
+    def test_user_mention_wrapped_in_ac_link_with_account_id(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Wrapped mention with only account-id
+        storage = """
+        <p>Contact <ac:link>
+            <ri:user ri:account-id="557058:3aade8e1-22a" />
+            <ac:link-body>Jane Doe</ac:link-body>
+        </ac:link></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@557058:3aade8e1-22a" in result
+        # Should use account-id when no username available
+        assert "Jane Doe" not in result or "@557058" in result
+
+    def test_user_mention_wrapped_in_ac_link_prefers_username(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Wrapped mention with both username and account-id
+        storage = """
+        <p>Mention <ac:link>
+            <ri:user ri:username="jsmith" ri:account-id="abc123" />
+            <ac:link-body>John Smith</ac:link-body>
+        </ac:link></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        # Should prefer username over account-id
+        assert "@abc123" not in result
+
+    def test_multiple_wrapped_user_mentions(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Multiple wrapped mentions in same paragraph
+        storage = """
+        <p>Team: <ac:link>
+            <ri:user ri:username="alice" />
+        </ac:link>, <ac:link>
+            <ri:user ri:username="bob" />
+        </ac:link>, and <ac:link>
+            <ri:user ri:username="charlie" />
+        </ac:link></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@alice" in result
+        assert "@bob" in result
+        assert "@charlie" in result
+
+    def test_wrapped_user_mention_in_formatted_text(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Wrapped mention inside formatted text
+        storage = """
+        <p><strong>Assigned to: <ac:link>
+            <ri:user ri:username="jsmith" />
+            <ac:link-body>John Smith</ac:link-body>
+        </ac:link></strong></p>
+        """
+        result = storage_to_markdown(storage)
+        assert "@jsmith" in result
+        assert "**" in result  # Should preserve bold formatting
+
 
 class TestTimeElements:
     """Test HTML time element conversion."""
