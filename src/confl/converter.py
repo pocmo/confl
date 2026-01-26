@@ -496,8 +496,11 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         # Check if this is a user mention wrapped in ac:link
         ri_user = el.find("ri:user")
         if ri_user is not None:
-            # Delegate to convert_ri_user to handle username/account-id logic
-            return self.convert_ri_user(ri_user, text, **options)
+            # Extract display name from link-body if present
+            link_body = el.find("ac:link-body")
+            display_name = link_body.get_text().strip() if link_body is not None else ""
+            # Delegate to convert_ri_user, passing display name as fallback
+            return self.convert_ri_user(ri_user, text, display_name=display_name, **options)
 
         # Extract link text from ac:link-body
         link_body = el.find("ac:link-body")
@@ -589,17 +592,28 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
 
         return ""
 
-    def convert_ri_user(self, el: Tag, text: str, **options: Any) -> str:
+    def convert_ri_user(self, el: Tag, text: str, display_name: str = "", **options: Any) -> str:
         """Convert Confluence user mention to @username format.
 
         Handles <ri:user> tags with username or account-id attributes.
-        Prefers ri:username for readability, falls back to ri:userkey or ri:account-id.
+        Prefers ri:username for readability, falls back to ri:userkey,
+        display_name, or ri:account-id.
+
+        Args:
+            el: The ri:user tag element
+            text: Inner text content (usually empty for user tags)
+            display_name: Display name from ac:link-body if available
+            **options: Additional options passed through
 
         Example Confluence formats:
             <ri:user ri:username="jsmith" />
             <ri:user ri:account-id="abc123" ri:userkey="~jsmith" />
+            <ac:link>
+              <ri:user ri:account-id="5e9c86..." />
+              <ac:link-body>John Smith</ac:link-body>
+            </ac:link>
 
-        Result: @jsmith or @abc123
+        Result: @jsmith, @John Smith, or @abc123
         """
         # Try to extract username (most readable)
         username_attr = el.get("ri:username", "")
@@ -615,6 +629,10 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             # Strip ~ prefix if present
             clean_userkey = userkey.lstrip("~")
             return f"@{clean_userkey}"
+
+        # Use display name if available (from ac:link-body)
+        if display_name:
+            return f"@{display_name}"
 
         # Last resort: use account-id
         account_id_attr = el.get("ri:account-id", "")

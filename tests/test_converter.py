@@ -1732,7 +1732,7 @@ class TestUserMentions:
     def test_user_mention_wrapped_in_ac_link_with_account_id(self) -> None:
         from confl.converter import storage_to_markdown
 
-        # Wrapped mention with only account-id
+        # Wrapped mention with only account-id but display name in link-body
         storage = """
         <p>Contact <ac:link>
             <ri:user ri:account-id="557058:3aade8e1-22a" />
@@ -1740,9 +1740,9 @@ class TestUserMentions:
         </ac:link></p>
         """
         result = storage_to_markdown(storage)
-        assert "@557058:3aade8e1-22a" in result
-        # Should use account-id when no username available
-        assert "Jane Doe" not in result or "@557058" in result
+        # Should use display name from link-body instead of account-id
+        assert "@Jane Doe" in result
+        assert "@557058:3aade8e1-22a" not in result
 
     def test_user_mention_wrapped_in_ac_link_prefers_username(self) -> None:
         from confl.converter import storage_to_markdown
@@ -1790,6 +1790,49 @@ class TestUserMentions:
         result = storage_to_markdown(storage)
         assert "@jsmith" in result
         assert "**" in result  # Should preserve bold formatting
+
+    def test_user_mention_with_display_name_no_username(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Real-world case: only account-id but display name in link-body
+        storage = """
+        <p>Assigned to <ac:link>
+            <ri:user ri:account-id="5e9c86c6a747380c188f4d4c" />
+            <ac:link-body>John Smith</ac:link-body>
+        </ac:link> for review</p>
+        """
+        result = storage_to_markdown(storage)
+        # Should show display name, not account ID
+        assert "@John Smith" in result
+        assert "@5e9c86c6a747380c188f4d4c" not in result
+
+    def test_user_mention_account_id_without_link_body(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # Edge case: account-id only, no link-body (falls back to account ID)
+        storage = """
+        <p>Contact <ac:link>
+            <ri:user ri:account-id="5e9c86c6a747380c188f4d4c" />
+        </ac:link></p>
+        """
+        result = storage_to_markdown(storage)
+        # No display name available, must fall back to account ID
+        assert "@5e9c86c6a747380c188f4d4c" in result
+
+    def test_user_mention_priority_username_over_display_name(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        # When username is available, prefer it over display name
+        storage = """
+        <p>Hello <ac:link>
+            <ri:user ri:username="jsmith" ri:account-id="abc123" />
+            <ac:link-body>John Smith (External)</ac:link-body>
+        </ac:link></p>
+        """
+        result = storage_to_markdown(storage)
+        # Should prefer username over display name
+        assert "@jsmith" in result
+        assert "@John Smith" not in result
 
 
 class TestTimeElements:
