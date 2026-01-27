@@ -330,6 +330,45 @@ Read [`docs/architecture/design-principles.md`](docs/architecture/design-princip
 
 ## Development Tips
 
+### Versioning and Releases
+
+The project uses **automatic version generation** with the "no-guess-dev" scheme via `hatch-vcs`:
+
+- **Version format:**
+  - **Tagged releases:** `1.0.0`, `1.1.0`, `2.0.0` (from git tags)
+  - **Dev builds:** `1.0.0.dev123+gabc123f` (based on commits since last tag)
+
+- **How it works:**
+  - Version is automatically generated from git history
+  - No manual version management needed
+  - Each commit gets a unique version string
+  - The `src/confl/_version.py` file is auto-generated during builds
+
+- **Creating a release:**
+  1. Decide on version number (follow [Semantic Versioning](https://semver.org/))
+  2. Create and push a git tag:
+     ```bash
+     git tag -a v1.1.0 -m "Release version 1.1.0"
+     git push origin v1.1.0
+     ```
+  3. The tagged commit will have clean version `1.1.0`
+  4. Subsequent commits will show dev versions like `1.1.1.dev1+ghash`
+
+- **Checking version:**
+  ```bash
+  # Show current version
+  uv run confl --version
+  
+  # In Python code
+  from confl import __version__
+  print(__version__)
+  ```
+
+- **Important notes:**
+  - Never edit `src/confl/_version.py` manually (it's in `.gitignore`)
+  - Don't hardcode version in `pyproject.toml` (it's in `dynamic = ["version"]`)
+  - CI/CD builds automatically use the version from git
+
 ### Testing with Real API
 
 For manual testing against real Confluence:

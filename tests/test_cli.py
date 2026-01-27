@@ -2,6 +2,7 @@
 
 from typer.testing import CliRunner
 
+from confl import __version__
 from confl.cli import app
 
 runner = CliRunner()
@@ -19,3 +20,19 @@ def test_cli_help():
     assert result.exit_code == 0
     assert "confl" in result.stdout.lower()
     assert "Confluence" in result.stdout
+
+
+def test_cli_version():
+    """Test that --version works."""
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "confl version" in result.stdout
+    assert __version__ in result.stdout
+
+
+def test_cli_version_short():
+    """Test that -V works."""
+    result = runner.invoke(app, ["-V"])
+    assert result.exit_code == 0
+    assert "confl version" in result.stdout
+    assert __version__ in result.stdout

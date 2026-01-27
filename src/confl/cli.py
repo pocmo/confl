@@ -4,6 +4,7 @@ import logging
 
 import typer
 
+from confl import __version__
 from confl.commands import attachment, auth, blogpost, comment, label, page, search, space, task
 from confl.context import ExecutionContext
 
@@ -51,8 +52,23 @@ def is_debug() -> bool:
     return _context.debug
 
 
+def version_callback(value: bool) -> None:
+    """Print version and exit."""
+    if value:
+        typer.echo(f"confl version {__version__}")
+        raise typer.Exit()
+
+
 @app.callback()
 def main(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show version and exit",
+        callback=version_callback,
+        is_eager=True,
+    ),
     profile: str | None = typer.Option(
         None,
         "--profile",
