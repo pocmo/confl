@@ -1478,7 +1478,10 @@ class TestConfluencePageLinks:
         """
         result = storage_to_markdown(storage, base_url="https://company.atlassian.net/wiki")
         # Uses /display/{SPACE}/{TITLE} format for direct page access
-        assert "[Project Overview](https://company.atlassian.net/wiki/display/DEV/Project%20Overview)" in result
+        assert (
+            "[Project Overview](https://company.atlassian.net/wiki/display/DEV/Project%20Overview)"
+            in result
+        )
 
     def test_page_link_with_base_url_no_space_key(self) -> None:
         from confl.converter import storage_to_markdown
@@ -1493,7 +1496,10 @@ class TestConfluencePageLinks:
         result = storage_to_markdown(
             storage, base_url="https://company.atlassian.net/wiki", space_key="DOCS"
         )
-        assert "[Getting Started](https://company.atlassian.net/wiki/display/DOCS/Getting%20Started)" in result
+        assert (
+            "[Getting Started](https://company.atlassian.net/wiki/display/DOCS/Getting%20Started)"
+            in result
+        )
 
     def test_page_link_with_base_url_no_space_at_all(self) -> None:
         from confl.converter import storage_to_markdown

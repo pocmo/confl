@@ -533,10 +533,7 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
 
             # Get link text (prefer ac:link-body over title)
             link_body = el.find("ac:link-body")
-            if link_body is not None:
-                link_text = link_body.get_text().strip()
-            else:
-                link_text = content_title
+            link_text = link_body.get_text().strip() if link_body is not None else content_title
 
             if not link_text:
                 link_text = "Page Link"

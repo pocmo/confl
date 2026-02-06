@@ -138,24 +138,29 @@ def strip_markdown(markdown_text: str) -> str:
     def extract_code_block(match: re.Match[str]) -> str:
         """Extract code content from code block."""
         content = match.group(0)[3:-3]  # Remove ``` from start and end
-        
+
         # Remove language specifier if present (first line/word before newline or space)
-        if content.startswith('\n'):
+        if content.startswith("\n"):
             # Code starts with newline (after language or directly)
-            content = content.lstrip('\n')
-        elif ' ' in content or '\n' in content:
+            content = content.lstrip("\n")
+        elif " " in content or "\n" in content:
             # Might have language specifier
             # Check if first token looks like a language
-            first_part = content.split()[0] if content.split() else ''
+            first_part = content.split()[0] if content.split() else ""
             # If first part is likely a language identifier (lowercase, short), skip it
-            if first_part and first_part.islower() and len(first_part) < 20 and '\n' not in first_part:
+            if (
+                first_part
+                and first_part.islower()
+                and len(first_part) < 20
+                and "\n" not in first_part
+            ):
                 # Skip potential language identifier
-                after_lang = content[len(first_part):]
-                if after_lang.startswith('\n') or after_lang.startswith(' '):
-                    content = after_lang.lstrip('\n ')
-        
+                after_lang = content[len(first_part) :]
+                if after_lang.startswith("\n") or after_lang.startswith(" "):
+                    content = after_lang.lstrip("\n ")
+
         return content.rstrip()
-    
+
     text = re.sub(r"```[\s\S]*?```", extract_code_block, text)
 
     # Remove inline code (`...`)
