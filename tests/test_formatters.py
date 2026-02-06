@@ -210,3 +210,101 @@ class TestFormatRelativeTimeEdgeCases:
         # Should handle naive timestamps by adding UTC timezone
         result = format_relative_time(naive_timestamp)
         assert "ago" in result or result == "just now"
+
+
+class TestStripMarkdown:
+    """Test Markdown stripping for plain text output."""
+
+    def test_code_block_content_preserved(self) -> None:
+        """Code block content should be extracted, not removed."""
+        from confl.formatters import strip_markdown
+
+        markdown = """```python
+print("hello")
+x = 42
+```"""
+        result = strip_markdown(markdown)
+        assert 'print("hello")' in result
+        assert "x = 42" in result
+        assert "```" not in result
+
+    def test_code_block_single_line(self) -> None:
+        """Single-line code blocks should work."""
+        from confl.formatters import strip_markdown
+
+        markdown = "``` IPHONEOS_DEPLOYMENT_TARGET = 16.0; ```"
+        result = strip_markdown(markdown)
+        assert "IPHONEOS_DEPLOYMENT_TARGET = 16.0;" in result
+        assert "```" not in result
+
+    def test_code_block_with_language(self) -> None:
+        """Code blocks with language tags should preserve code."""
+        from confl.formatters import strip_markdown
+
+        markdown = "```swift\nlet x = 42\n```"
+        result = strip_markdown(markdown)
+        assert "let x = 42" in result
+        assert "swift" not in result
+        assert "```" not in result
+
+    def test_empty_code_block(self) -> None:
+        """Empty code blocks should be handled gracefully."""
+        from confl.formatters import strip_markdown
+
+        markdown = "``` ```"
+        result = strip_markdown(markdown)
+        # Should not crash and should remove the backticks
+        assert "```" not in result
+
+    def test_inline_code_preserved(self) -> None:
+        """Inline code content should be preserved."""
+        from confl.formatters import strip_markdown
+
+        markdown = "Use `variable_name` in the code."
+        result = strip_markdown(markdown)
+        assert "variable_name" in result
+        assert "`" not in result
+
+    def test_mixed_code_formatting(self) -> None:
+        """Both code blocks and inline code should work together."""
+        from confl.formatters import strip_markdown
+
+        markdown = """Here is some `inline_code` and a block:
+```java
+public class Test {}
+```"""
+        result = strip_markdown(markdown)
+        assert "inline_code" in result
+        assert "public class Test {}" in result
+        assert "`" not in result
+
+    def test_bold_italic_removed(self) -> None:
+        """Bold and italic formatting should be stripped."""
+        from confl.formatters import strip_markdown
+
+        markdown = "This is **bold** and *italic* text."
+        result = strip_markdown(markdown)
+        assert "bold" in result
+        assert "italic" in result
+        assert "**" not in result
+        assert result.count("*") == 0
+
+    def test_links_text_preserved(self) -> None:
+        """Link text should be preserved, URLs removed."""
+        from confl.formatters import strip_markdown
+
+        markdown = "Check out [this link](https://example.com) for more."
+        result = strip_markdown(markdown)
+        assert "this link" in result
+        assert "example.com" not in result
+        assert "[" not in result
+        assert "]" not in result
+
+    def test_headers_removed(self) -> None:
+        """Header markers should be removed."""
+        from confl.formatters import strip_markdown
+
+        markdown = "## My Header\nContent here"
+        result = strip_markdown(markdown)
+        assert "My Header" in result
+        assert "##" not in result

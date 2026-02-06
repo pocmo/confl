@@ -460,6 +460,30 @@ class TestConfluenceCodeMacro:
         assert "function hello()" in result
         assert "console.log('Hello');" in result
 
+    def test_code_macro_empty(self) -> None:
+        """Test that empty code macros render as empty code blocks, not placeholders."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="code" ac:schema-version="1" />
+        """
+        result = storage_to_markdown(storage)
+        assert "```" in result
+        assert "[Macro: code]" not in result
+
+    def test_code_macro_empty_with_language(self) -> None:
+        """Test that empty code macros with language render correctly."""
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:structured-macro ac:name="code" ac:schema-version="1">
+            <ac:parameter ac:name="language">swift</ac:parameter>
+        </ac:structured-macro>
+        """
+        result = storage_to_markdown(storage)
+        assert "```swift" in result
+        assert "[Macro: code]" not in result
+
 
 class TestConfluenceImages:
     """Test Confluence image tag conversion."""

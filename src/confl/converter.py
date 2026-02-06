@@ -225,6 +225,9 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             if code_body is not None:
                 code_text = code_body.get_text().strip()
                 return f"```{language}\n{code_text}\n```\n\n"
+            else:
+                # Empty code block - still render as code fence
+                return f"```{language}\n```\n\n"
 
         # Handle info/warning/note panels
         if macro_name in ("info", "warning", "note", "tip"):

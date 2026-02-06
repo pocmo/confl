@@ -133,17 +133,43 @@ def strip_markdown(markdown_text: str) -> str:
     """
     text = markdown_text
 
-    # Remove code blocks (```...```)
-    text = re.sub(r"```[\s\S]*?```", "", text)
+    # Extract code from code blocks (```...```) - keep the code content, remove the backticks
+    # Match code blocks and extract just the code content
+    def extract_code_block(match: re.Match[str]) -> str:
+        """Extract code content from code block."""
+        content = match.group(0)[3:-3]  # Remove ``` from start and end
+        
+        # Remove language specifier if present (first line/word before newline or space)
+        if content.startswith('\n'):
+            # Code starts with newline (after language or directly)
+            content = content.lstrip('\n')
+        elif ' ' in content or '\n' in content:
+            # Might have language specifier
+            # Check if first token looks like a language
+            first_part = content.split()[0] if content.split() else ''
+            # If first part is likely a language identifier (lowercase, short), skip it
+            if first_part and first_part.islower() and len(first_part) < 20 and '\n' not in first_part:
+                # Skip potential language identifier
+                after_lang = content[len(first_part):]
+                if after_lang.startswith('\n') or after_lang.startswith(' '):
+                    content = after_lang.lstrip('\n ')
+        
+        return content.rstrip()
+    
+    text = re.sub(r"```[\s\S]*?```", extract_code_block, text)
 
     # Remove inline code (`...`)
     text = re.sub(r"`([^`]+)`", r"\1", text)
 
     # Remove bold/italic (**text**, *text*, __text__, _text_)
+    # For underscores, only match if surrounded by word boundaries to avoid matching variable_names
     text = re.sub(r"\*\*([^\*]+)\*\*", r"\1", text)
     text = re.sub(r"__([^_]+)__", r"\1", text)
     text = re.sub(r"\*([^\*]+)\*", r"\1", text)
-    text = re.sub(r"_([^_]+)_", r"\1", text)
+    # Only treat underscore as italic if preceded/followed by whitespace or start/end of string
+    text = re.sub(r"(?<=\s)_([^_]+)_(?=\s)", r"\1", text)
+    text = re.sub(r"^_([^_]+)_(?=\s)", r"\1", text, flags=re.MULTILINE)
+    text = re.sub(r"(?<=\s)_([^_]+)_$", r"\1", text, flags=re.MULTILINE)
 
     # Remove links [text](url) -> text
     text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
