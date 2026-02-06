@@ -1,6 +1,7 @@
 """Page commands."""
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -26,6 +27,17 @@ from confl.utils.page_helpers import extract_page_id
 app = typer.Typer(help="Manage pages")
 console = Console()
 err_console = Console(stderr=True)
+
+
+def _extract_space_key(page: dict) -> str | None:
+    """Extract space key from page's webui link."""
+    webui = page.get("_links", {}).get("webui", "")
+    if webui:
+        # Format: /spaces/{SPACE_KEY}/pages/...
+        match = re.match(r"/spaces/([^/]+)/", webui)
+        if match:
+            return match.group(1)
+    return None
 
 
 @app.command("get")
@@ -93,14 +105,18 @@ def get_page(
     elif markdown:
         # Output raw markdown (converted from storage)
         content = get_page_content(page, "storage")
-        markdown_content = storage_to_markdown(content)
+        base_url = page.get("_links", {}).get("base")
+        space_key = _extract_space_key(page)
+        markdown_content = storage_to_markdown(content, base_url=base_url, space_key=space_key)
         if not body_only:
             console.print(format_page_metadata(page))
         print(markdown_content)
     elif plain:
         # Output plain text (converted from storage, stripped of markdown)
         content = get_page_content(page, "storage")
-        markdown_content = storage_to_markdown(content)
+        base_url = page.get("_links", {}).get("base")
+        space_key = _extract_space_key(page)
+        markdown_content = storage_to_markdown(content, base_url=base_url, space_key=space_key)
         plain_content = strip_markdown(markdown_content)
         if not body_only:
             console.print(format_page_metadata(page))
@@ -112,7 +128,9 @@ def get_page(
 
         # Get storage content and convert to Markdown
         content = get_page_content(page, "storage")
-        markdown_content = storage_to_markdown(content)
+        base_url = page.get("_links", {}).get("base")
+        space_key = _extract_space_key(page)
+        markdown_content = storage_to_markdown(content, base_url=base_url, space_key=space_key)
 
         # Render with Rich's Markdown renderer
         md = Markdown(markdown_content)

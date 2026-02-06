@@ -3,6 +3,7 @@
 import html
 import logging
 from typing import Any
+from urllib.parse import quote
 
 import mistune
 from bs4 import Tag
@@ -203,6 +204,21 @@ def markdown_to_storage(markdown: str) -> str:
 
 class ConfluenceMarkdownConverter(MarkdownConverter):
     """Custom markdownify converter that handles Confluence storage format tags."""
+
+    def __init__(
+        self, base_url: str | None = None, space_key: str | None = None, **kwargs: Any
+    ) -> None:
+        """Initialize converter with optional base URL for internal links.
+
+        Args:
+            base_url: Confluence base URL (e.g., 'https://company.atlassian.net/wiki')
+                     Used to construct clickable URLs for internal page links.
+            space_key: Current page's space key, used as fallback for links without explicit space.
+            **kwargs: Additional arguments passed to MarkdownConverter.
+        """
+        super().__init__(**kwargs)
+        self.base_url = base_url.rstrip("/") if base_url else None
+        self.space_key = space_key
 
     def convert_ac_structured_macro(self, el: Tag, text: str, **options: Any) -> str:
         """Convert Confluence structured macro to Markdown."""
@@ -481,7 +497,8 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         Handles <ac:link> tags with <ri:page> or <ri:user> references.
 
         For user mentions: delegates to convert_ri_user() to show @username
-        For page links: shows link text in brackets: [Page Title]
+        For page links: creates clickable markdown links when base_url is available,
+                       otherwise shows link text in brackets: [Page Title]
 
         Example Confluence formats:
             <ac:link ac:card-appearance="inline">
@@ -494,7 +511,7 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
                 <ac:link-body>John Smith</ac:link-body>
             </ac:link>
 
-        Result: [Page Title] or @jsmith
+        Result: [Page Title](url) or @jsmith
         """
         # Check if this is a user mention wrapped in ac:link
         ri_user = el.find("ri:user")
@@ -505,19 +522,43 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
             # Delegate to convert_ri_user, passing display name as fallback
             return self.convert_ri_user(ri_user, text, display_name=display_name, **options)
 
-        # Extract link text from ac:link-body
+        # Check for ri:page to build internal link
+        ri_page = el.find("ri:page")
+        if ri_page is not None:
+            # Extract page title and optional space key
+            content_title_attr = ri_page.get("ri:content-title", "")
+            content_title = content_title_attr if isinstance(content_title_attr, str) else ""
+            space_key_attr = ri_page.get("ri:space-key", "")
+            space_key = space_key_attr if isinstance(space_key_attr, str) else ""
+
+            # Get link text (prefer ac:link-body over title)
+            link_body = el.find("ac:link-body")
+            if link_body is not None:
+                link_text = link_body.get_text().strip()
+            else:
+                link_text = content_title
+
+            if not link_text:
+                link_text = "Page Link"
+
+            # Build URL if we have base_url and enough info
+            # Use space from link, or fall back to current page's space
+            effective_space = space_key or self.space_key
+            if self.base_url and effective_space and content_title:
+                # URL format: /display/{SPACE}/{TITLE} - Confluence's title-based navigation
+                encoded_title = quote(content_title, safe="")
+                url = f"{self.base_url}/display/{effective_space}/{encoded_title}"
+                return f"[{link_text}]({url})"
+
+            # No base_url or missing space, return bracketed text
+            return f"[{link_text}]"
+
+        # Extract link text from ac:link-body (non-page links)
         link_body = el.find("ac:link-body")
         if link_body is not None:
             link_text = link_body.get_text().strip()
             if link_text:
                 return f"[{link_text}]"
-
-        # Fallback: try to get page title from ri:page attributes
-        ri_page = el.find("ri:page")
-        if ri_page is not None:
-            content_title = ri_page.get("ri:content-title", "")
-            if content_title:
-                return f"[{content_title}]"
 
         # Last resort: return any text content
         if text.strip():
@@ -672,7 +713,9 @@ class ConfluenceMarkdownConverter(MarkdownConverter):
         return "[date]"
 
 
-def storage_to_markdown(storage: str) -> str:
+def storage_to_markdown(
+    storage: str, *, base_url: str | None = None, space_key: str | None = None
+) -> str:
     """
     Convert Confluence storage format to Markdown.
 
@@ -682,6 +725,10 @@ def storage_to_markdown(storage: str) -> str:
 
     Args:
         storage: Confluence storage format XHTML string
+        base_url: Optional Confluence base URL (e.g., 'https://company.atlassian.net/wiki').
+                 When provided, internal page links will be converted to clickable markdown links.
+        space_key: Optional space key for the current page. Used as fallback for internal links
+                  that don't specify a space key.
 
     Returns:
         Markdown text
@@ -712,7 +759,7 @@ def storage_to_markdown(storage: str) -> str:
         - Live search macro → placeholder
         - Page properties macros → placeholder
         - Include/excerpt-include macros → placeholder with page reference
-        - Page links (ac:link with ri:page) → bracketed text
+        - Page links (ac:link with ri:page) → clickable links when base_url provided
         - User mentions (ri:user) → @username format
 
     Partial support:
@@ -732,6 +779,8 @@ def storage_to_markdown(storage: str) -> str:
         This is **bold**.
     """
     converter = ConfluenceMarkdownConverter(
+        base_url=base_url,
+        space_key=space_key,
         heading_style="ATX",  # Use # for headings
     )
 

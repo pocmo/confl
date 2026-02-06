@@ -171,8 +171,8 @@ def strip_markdown(markdown_text: str) -> str:
     text = re.sub(r"^_([^_]+)_(?=\s)", r"\1", text, flags=re.MULTILINE)
     text = re.sub(r"(?<=\s)_([^_]+)_$", r"\1", text, flags=re.MULTILINE)
 
-    # Remove links [text](url) -> text
-    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+    # Convert links [text](url) -> text (url)
+    text = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", r"\1 (\2)", text)
 
     # Remove images ![alt](url)
     text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)

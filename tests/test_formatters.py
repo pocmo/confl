@@ -290,15 +290,14 @@ public class Test {}
         assert result.count("*") == 0
 
     def test_links_text_preserved(self) -> None:
-        """Link text should be preserved, URLs removed."""
+        """Link text should be preserved with URL in parentheses."""
         from confl.formatters import strip_markdown
 
         markdown = "Check out [this link](https://example.com) for more."
         result = strip_markdown(markdown)
         assert "this link" in result
-        assert "example.com" not in result
-        assert "[" not in result
-        assert "]" not in result
+        assert "example.com" in result
+        assert result == "Check out this link (https://example.com) for more."
 
     def test_headers_removed(self) -> None:
         """Header markers should be removed."""

@@ -1,6 +1,7 @@
 """Blog post commands."""
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -24,6 +25,17 @@ from confl.utils.blogpost_helpers import extract_blogpost_id
 app = typer.Typer(help="Manage blog posts")
 console = Console()
 err_console = Console(stderr=True)
+
+
+def _extract_space_key(blogpost: dict) -> str | None:
+    """Extract space key from blogpost's webui link."""
+    webui = blogpost.get("_links", {}).get("webui", "")
+    if webui:
+        # Format: /spaces/{SPACE_KEY}/blog/...
+        match = re.match(r"/spaces/([^/]+)/", webui)
+        if match:
+            return match.group(1)
+    return None
 
 
 @app.command("get")
@@ -91,14 +103,18 @@ def get_blogpost(
     elif markdown:
         # Output raw markdown (converted from storage)
         content = get_blogpost_content(blogpost, "storage")
-        markdown_content = storage_to_markdown(content)
+        base_url = blogpost.get("_links", {}).get("base")
+        space_key = _extract_space_key(blogpost)
+        markdown_content = storage_to_markdown(content, base_url=base_url, space_key=space_key)
         if not body_only:
             console.print(format_blogpost_metadata(blogpost))
         print(markdown_content)
     elif plain:
         # Output plain text (converted from storage, stripped of markdown)
         content = get_blogpost_content(blogpost, "storage")
-        markdown_content = storage_to_markdown(content)
+        base_url = blogpost.get("_links", {}).get("base")
+        space_key = _extract_space_key(blogpost)
+        markdown_content = storage_to_markdown(content, base_url=base_url, space_key=space_key)
         plain_content = strip_markdown(markdown_content)
         if not body_only:
             console.print(format_blogpost_metadata(blogpost))
@@ -110,7 +126,9 @@ def get_blogpost(
 
         # Get storage content and convert to Markdown
         content = get_blogpost_content(blogpost, "storage")
-        markdown_content = storage_to_markdown(content)
+        base_url = blogpost.get("_links", {}).get("base")
+        space_key = _extract_space_key(blogpost)
+        markdown_content = storage_to_markdown(content, base_url=base_url, space_key=space_key)
 
         # Render with Rich's Markdown renderer
         md = Markdown(markdown_content)

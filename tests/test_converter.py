@@ -1467,6 +1467,76 @@ class TestConfluencePageLinks:
         result = storage_to_markdown(storage)
         assert "[Page Link]" in result
 
+    def test_page_link_with_base_url_and_space_key(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link ac:card-appearance="inline">
+            <ri:page ri:space-key="DEV" ri:content-title="Project Overview" />
+            <ac:link-body>Project Overview</ac:link-body>
+        </ac:link>
+        """
+        result = storage_to_markdown(storage, base_url="https://company.atlassian.net/wiki")
+        # Uses /display/{SPACE}/{TITLE} format for direct page access
+        assert "[Project Overview](https://company.atlassian.net/wiki/display/DEV/Project%20Overview)" in result
+
+    def test_page_link_with_base_url_no_space_key(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link ac:card-appearance="inline">
+            <ri:page ri:content-title="Getting Started" />
+            <ac:link-body>Getting Started</ac:link-body>
+        </ac:link>
+        """
+        # Without space key in link, uses space_key parameter as fallback
+        result = storage_to_markdown(
+            storage, base_url="https://company.atlassian.net/wiki", space_key="DOCS"
+        )
+        assert "[Getting Started](https://company.atlassian.net/wiki/display/DOCS/Getting%20Started)" in result
+
+    def test_page_link_with_base_url_no_space_at_all(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link ac:card-appearance="inline">
+            <ri:page ri:content-title="Orphan Page" />
+            <ac:link-body>Orphan Page</ac:link-body>
+        </ac:link>
+        """
+        # Without any space key, falls back to bracketed text
+        result = storage_to_markdown(storage, base_url="https://company.atlassian.net/wiki")
+        assert "[Orphan Page]" in result
+        assert "https://" not in result
+
+    def test_page_link_without_base_url(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link ac:card-appearance="inline">
+            <ri:page ri:space-key="DEV" ri:content-title="API Docs" />
+            <ac:link-body>API Docs</ac:link-body>
+        </ac:link>
+        """
+        # Without base_url, should just show bracketed text (backward compatible)
+        result = storage_to_markdown(storage)
+        assert "[API Docs]" in result
+        assert "https://" not in result
+
+    def test_page_link_with_base_url_trailing_slash(self) -> None:
+        from confl.converter import storage_to_markdown
+
+        storage = """
+        <ac:link>
+            <ri:page ri:space-key="PM" ri:content-title="Roadmap" />
+            <ac:link-body>Roadmap</ac:link-body>
+        </ac:link>
+        """
+        # Base URL with trailing slash should be normalized
+        result = storage_to_markdown(storage, base_url="https://company.atlassian.net/wiki/")
+        assert "https://company.atlassian.net/wiki/display/PM/Roadmap" in result
+        assert "/wiki//display" not in result  # No double slash
+
 
 class TestTaskLists:
     """Test Confluence task list conversion."""
